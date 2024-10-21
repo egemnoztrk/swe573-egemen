@@ -1,20 +1,10 @@
 import os
-from flask import Flask
-from views import BasicRoutes
-
-class FlaskApp:
-    def __init__(self):
-        self.app = Flask(__name__)
-        self.app.debug = True
-        self.app.secret_key = os.environ.get('SECRET_KEY')
-        self.register_routes()
-
-    def register_routes(self):
-        BasicRoutes(self.app)  # Initialize the routes
-
-    def run(self):
-        self.app.run()
+from routes import FlaskApp
 
 if __name__ == '__main__':
-    flask_app = FlaskApp()
+    # Initialize and run the Flask app
+    flask_secret_key = os.getenv("FLASK_SECRET_KEY", "")
+    mongo_uri = os.getenv("MONGO_URI", "")
+    mongo_db_name = os.getenv("MONGO_DB_NAME", "")
+    flask_app = FlaskApp(flask_secret_key, mongo_uri, mongo_db_name)
     flask_app.run()
