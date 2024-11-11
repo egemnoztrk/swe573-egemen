@@ -11,5 +11,3 @@ if __name__ == '__main__':
     flask_app = FlaskApp(flask_secret_key, mysql_uri)
     flask_app.run()
     
-    while True:
-        time.sleep(60)
