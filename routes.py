@@ -22,6 +22,8 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'txt', 'doc', 'docx'}
 class FlaskApp:
     def __init__(self, secret_key: str, mysql_uri: str):
         self.app = Flask(__name__, static_folder='static')
+        self.app.config["SESSION_PERMANENT"] = True
+        self.app.config["SESSION_TYPE"]      = "filesystem"
         self.app.config['SQLALCHEMY_DATABASE_URI'] = mysql_uri
         self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         self.app.secret_key = secret_key
@@ -64,9 +66,9 @@ class FlaskApp:
 
     def run(self):
         try:
-            self.app.run(host='0.0.0.0', port=5500)
+            self.app.run(host='0.0.0.0', port=80)
         except:
-            self.app.run(host='0.0.0.0', port=5501)
+            self.app.run(host='0.0.0.0', port=81)
 
 
 class AuthRoutes:
