@@ -66,9 +66,9 @@ class FlaskApp:
 
     def run(self):
         try:
-            self.app.run(host='0.0.0.0', port=80)
+            self.app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5500)))
         except:
-            self.app.run(host='0.0.0.0', port=81)
+            self.app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5500)))
 
 
 class AuthRoutes:
