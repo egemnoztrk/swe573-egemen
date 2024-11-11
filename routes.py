@@ -265,18 +265,26 @@ class BlogRoutes:
 
         @self.app.route('/blog/posts', methods=['GET'])
         def get_posts():
-            # Get the 'limit' parameter from the query string, defaulting to None if not provided
-            limit = request.args.get('limit', type=int)
+            DEFAULT_LIMIT = 6
+            MAX_LIMIT = 10  # Optional: to prevent excessive data retrieval
 
-            # Query the database, applying the limit if provided
-            if limit:
-                posts = BlogPost.query.limit(limit).all()
-            else:
-                posts = BlogPost.query.all()
+            try:
+                limit = request.args.get('limit', default=DEFAULT_LIMIT, type=int)
+                if limit < 1:
+                    raise ValueError("Limit must be a positive integer.")
+                if limit > MAX_LIMIT:
+                    limit = MAX_LIMIT
+            except ValueError as ve:
+                return jsonify({"error": str(ve)}), 400
 
-            # Convert posts to dictionary format for JSON response
-            result = [post.to_dict() for post in posts]
-            return jsonify(result), 200
+            try:
+                posts = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(limit).all()                
+                posts = list(reversed(posts))
+                result = [post.to_dict() for post in posts]
+                return jsonify(result), 200
+            except Exception as e:
+                # Log the exception as needed
+                return jsonify({"error": "An error occurred while fetching posts."}), 500
 
         @self.app.route('/blog/posts/user', methods=['GET'])
         def get_user_posts():
