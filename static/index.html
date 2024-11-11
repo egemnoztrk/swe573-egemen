@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystique Matters</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Styles remain the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: #007bff;
+            padding: 10px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav .nav-brand {
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        nav .nav-links {
+            display: inline-block;
+            float: right;
+        }
+
+        nav .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        nav .nav-links a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Red Logout Button */
+        .logout-button {
+            background-color: #dc3545; /* Bootstrap red color */
+            color: white !important;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .logout-button:hover {
+            background-color: #c82333;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            background-image: url('https://images.pexels.com/photos/1234567/pexels-photo-1234567.jpeg?w=1200&h=400&fit=crop'); /* Placeholder, replace with actual image */
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 50px 10px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Dark overlay for readability */
+        }
+
+        .hero h1 {
+            font-size: 50px;
+            margin-bottom: 20px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .hero p {
+            font-size: 22px;
+            margin-bottom: 30px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .hero button {
+            padding: 12px 28px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            z-index: 1;
+            position: relative;
+        }
+
+        .hero button:hover {
+            background-color: #218838;
+        }
+
+        /* Blog Section */
+        .blog-section {
+            padding: 40px 20px;
+            background-color: #fff;
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            margin-bottom: 40px;
+        }
+
+        .blog-section h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .blog-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .blog-post {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 30%;
+            transition: transform 0.3s ease;
+        }
+
+        .blog-post:hover {
+            transform: translateY(-5px);
+        }
+
+        .blog-post img {
+            width: 100%;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .blog-post .content {
+            padding: 20px;
+        }
+
+        .blog-post h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .blog-post p {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .blog-post .author {
+            font-style: italic;
+            color: #777;
+            font-size: 12px;
+        }
+
+        .blog-post a {
+            display: inline-block;
+            margin-top: 10px;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .blog-post a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading Placeholder */
+        .loading-placeholder {
+            text-align: center;
+            font-size: 18px;
+            color: #555;
+            margin: 400px 0;
+            display: none; /* Initially hidden */
+        }
+
+        /* New Post Form */
+        .new-post-form {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .new-post-form h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .new-post-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .new-post-form input,
+        .new-post-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .new-post-form button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .new-post-form button:hover {
+            background-color: #218838;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .blog-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .blog-post {
+                width: 100%;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+        }
+
+        /* Tags Styling */ /* Added CSS for tags */
+        .tags {
+            margin-top: 10px;
+        }
+
+        .tag {
+            display: inline-block;
+            background-color: #e0e0e0;
+            color: #333;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 15px;
+            font-size: 12px;
+            text-decoration: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .tag:hover {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <a href="/" class="nav-brand">Mystique Matters</a>
+        <div class="nav-links" id="navLinks">
+            <!-- Links will be dynamically inserted here based on authentication status -->
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Welcome to Mystique Matters</h1>
+        <p>Explore insights about unknown objects.</p>
+        <button onclick="window.location.href='/register'">Join Us</button>
+    </div>
+
+    <!-- Blog Section -->
+    <div class="blog-section container">
+        <h2>Latest Blog Posts</h2>
+        
+        <!-- Loading Placeholder -->
+        <div id="loadingPlaceholder" class="loading-placeholder">Loading blog posts...</div>
+
+        <div class="blog-grid" id="postList">
+            <!-- Blog posts will be dynamically inserted here -->
+        </div>
+
+        <!-- New Post Form -->
+        <div class="new-post-form" id="newPostForm" style="display: none;">
+            <h3>Create a New Post</h3>
+            <form id="postForm" enctype="multipart/form-data">
+                <label for="postTitle">Title</label>
+                <input type="text" id="postTitle" name="title" required>
+
+                <label for="postContent">Content</label>
+                <textarea id="postContent" name="content" rows="5" required></textarea>
+
+                <label for="postTags">Tags <small>(separated by commas)</small></label>
+                <input type="text" id="postTags" name="tags" placeholder="e.g., mystery, science, history">
+
+                <label for="postAuthor">Author</label>
+                <input type="text" id="postAuthor" name="author" readonly>
+
+                <label for="postPhoto">Photo</label>
+                <input type="file" id="postPhoto" name="photo" accept="image/*">
+
+                <label for="postFile">Additional File</label>
+                <input type="file" id="postFile" name="file">
+
+                <button type="button" onclick="submitPost()">Submit Post</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2024 Mystique Matters. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Function to check session
+        var userName = ""; // Will store the actual user name if logged in
+
+        function checkSession() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/auth/check_session', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    userName = response.user_name;
+                    showNewPostForm(true);
+                    updateNavLinks(true);
+                } else {
+                    showNewPostForm(false);
+                    updateNavLinks(false);
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Request failed');
+                showNewPostForm(false);
+                updateNavLinks(false);
+            };
+            xhr.send();
+        }
+
+        // Show or hide the New Post Form based on session status
+        function showNewPostForm(isLoggedIn) {
+            var newPostForm = document.getElementById('newPostForm');
+            if (isLoggedIn) {
+                // Assuming the user’s name is retrieved from the session endpoint or another way
+                document.getElementById('postAuthor').value = userName;
+                newPostForm.style.display = 'block';
+            } else {
+                newPostForm.style.display = 'none';
+            }
+        }
+
+        // Update Navigation Links based on authentication status
+        function updateNavLinks(isLoggedIn) {
+            var navLinks = document.getElementById('navLinks');
+            navLinks.innerHTML = ''; // Clear existing links
+
+            if (isLoggedIn) {
+                // Create Profile link
+                var profileLink = document.createElement('a');
+                profileLink.href = '/profile';
+                profileLink.textContent = 'Profile';
+                navLinks.appendChild(profileLink);
+
+                // Create Logout button
+                var logoutButton = document.createElement('a');
+                logoutButton.href = '#';
+                logoutButton.textContent = 'Logout';
+                logoutButton.classList.add('logout-button');
+                logoutButton.onclick = function(event) {
+                    event.preventDefault();
+                    logout();
+                };
+                navLinks.appendChild(logoutButton);
+            } else {
+                // Create Login link
+                var loginLink = document.createElement('a');
+                loginLink.href = '/login';
+                loginLink.textContent = 'Login';
+                navLinks.appendChild(loginLink);
+
+                // Create Register link
+                var registerLink = document.createElement('a');
+                registerLink.href = '/register';
+                registerLink.textContent = 'Register';
+                navLinks.appendChild(registerLink);
+            }
+        }
+
+        // Function to logout the user
+        function logout() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/auth/logout', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert("Logged out successfully!");
+                    updateNavLinks(false);
+                    showNewPostForm(false);
+                } else {
+                    alert("Failed to logout: " + xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                alert("Request failed.");
+            };
+            xhr.send(JSON.stringify({})); // Send empty body or as required by your backend
+        }
+
+        // Fetch the latest blog posts
+        function fetchLatestPosts() {
+            var loadingPlaceholder = document.getElementById('loadingPlaceholder');
+            var postList = document.getElementById('postList');
+            
+            loadingPlaceholder.style.display = 'block';
+            postList.style.display = 'none';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/blog/posts?limit=6', true);
+            xhr.onload = function () {
+                loadingPlaceholder.style.display = 'none'; 
+                postList.style.display = 'flex'; 
+
+                if (xhr.status === 200) {
+                    var posts = JSON.parse(xhr.responseText);
+                    postList.innerHTML = ''; 
+                    if (posts.length > 0) {
+                        posts.forEach(function (post) {
+                            var postItem = document.createElement('div');
+                            postItem.classList.add('blog-post');
+                            postItem.innerHTML = `
+                                <img src="${post.photo_url || 'https://via.placeholder.com/300x200'}" alt="Post Image">
+                                <div class="content">
+                                    <h3>${sanitizeHTML(post.title)}</h3>
+                                    <p>${sanitizeHTML(post.content.substring(0, 150))}...</p>
+                                    <p class="author">By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}</p>
+                                    <div class="tags">
+                                        ${post.tags && post.tags.length > 0 ? post.tags.map(tag => `<a href="/tags/${encodeURIComponent(tag)}" class="tag">${sanitizeHTML(tag)}</a>`).join(' ') : ''}
+                                    </div>
+                                    <a href="post?post_id=${encodeURIComponent(post.id)}">Read More</a>
+                                </div>
+                            `;
+                            postList.appendChild(postItem);
+                        });
+                    } else {
+                        postList.innerHTML = '<p class="no-posts">No posts available.</p>';
+                    }
+                } else {
+                    console.error('Failed to fetch posts:', xhr.statusText);
+                    postList.innerHTML = '<p class="no-posts">Failed to load posts.</p>';
+                }
+            };
+            xhr.onerror = function() {
+                loadingPlaceholder.style.display = 'none';
+                postList.style.display = 'flex';
+                postList.innerHTML = '<p class="no-posts">Failed to load posts.</p>';
+            };
+            xhr.send();
+        }
+
+        // Function to submit a new post
+        function submitPost() {
+            var form = document.getElementById('postForm');
+            var formData = new FormData(form);
+
+            // Get the tags from the input and format them
+            var tagsInput = document.getElementById('postTags').value;
+            var tagsArray = tagsInput.split(',').map(function(tag) {
+                return tag.trim();
+            }).filter(function(tag) {
+                return tag.length > 0;
+            });
+
+            // Append tags as JSON string or as per backend requirement
+            formData.append('tags', JSON.stringify(tagsArray));
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/blog/posts', true);
+            // Note: When sending FormData, do not set the Content-Type header manually
+            xhr.onload = function() {
+                if (xhr.status === 201) {
+                    alert("Post created successfully!");
+                    form.reset();
+                    fetchLatestPosts(); 
+                } else {
+                    alert("Failed to submit post: " + xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                alert("Request failed.");
+            };
+            xhr.send(formData);
+        }
+
+        // Utility function to sanitize HTML to prevent XSS
+        function sanitizeHTML(str) {
+            var temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
+        // Check session and fetch posts on page load
+        window.onload = function() {
+            checkSession();
+            fetchLatestPosts();
+        };
+    </script>
+
+</body>
+</html>

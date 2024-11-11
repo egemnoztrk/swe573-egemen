@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Post - Mystique Matters</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Similar styles as in your main page */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .post-title {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .post-meta {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .post-image {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .post-content {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        /* Tags Styling */
+        .post-tags {
+            margin-top: 20px;
+        }
+
+        .post-tags .tag {
+            display: inline-block;
+            background-color: #e0e0e0;
+            color: #333;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 15px;
+            font-size: 12px;
+            text-decoration: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .post-tags .tag:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Comments Section Styling */
+        .comments-section {
+            margin-top: 40px;
+        }
+
+        .comments-section h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .comments-list {
+            margin-bottom: 30px;
+        }
+
+        .comment {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+
+        .comment:last-child {
+            border-bottom: none;
+        }
+
+        .comment .comment-author {
+            font-weight: 500;
+            color: #007bff;
+        }
+
+        .comment .comment-date {
+            font-size: 12px;
+            color: #777;
+            margin-left: 10px;
+        }
+
+        .comment .comment-content {
+            margin-top: 5px;
+            font-size: 16px;
+            color: #555;
+        }
+
+        /* New Comment Form Styling */
+        .new-comment-form {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .new-comment-form h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .new-comment-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .new-comment-form input,
+        .new-comment-form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .new-comment-form button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .new-comment-form button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: #007bff;
+            padding: 10px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav .nav-brand {
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        nav .nav-links {
+            display: inline-block;
+            float: right;
+        }
+
+        nav .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        nav .nav-links a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Red Logout Button */
+        .logout-button {
+            background-color: #dc3545; /* Bootstrap red color */
+            color: white !important;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .logout-button:hover {
+            background-color: #c82333;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .post-title {
+                font-size: 24px;
+            }
+
+            .post-content {
+                font-size: 16px;
+            }
+
+            .post-tags .tag {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+
+            .comments-section h3 {
+                font-size: 20px;
+            }
+
+            .comment .comment-content {
+                font-size: 15px;
+            }
+
+            .new-comment-form h4 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <a href="/" class="nav-brand">Mystique Matters</a>
+        <div class="nav-links" id="navLinks">
+            <!-- Links will be dynamically inserted here based on authentication status -->
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Post details will be dynamically inserted here -->
+        <h1 id="postTitle">Loading...</h1>
+        <p id="postMeta" class="post-meta"></p>
+        <img id="postImage" class="post-image" src="" alt="Post Image" style="display: none;">
+        <div id="postContent" class="post-content"></div>
+        
+        <!-- Tags Section -->
+        <div id="postTags" class="post-tags"></div>
+        
+        <!-- Comments Section -->
+        <div id="commentsSection" class="comments-section">
+            <h3>Comments</h3>
+            <div id="commentsList" class="comments-list">
+                <!-- Existing comments will be inserted here -->
+            </div>
+            <div id="newCommentForm" class="new-comment-form" style="display: none;">
+                <h4>Add a Comment</h4>
+                <form id="commentForm">
+                    <label for="commentAuthor">Name</label>
+                    <input type="text" id="commentAuthor" name="author" required>
+                    
+                    <label for="commentContent">Comment</label>
+                    <textarea id="commentContent" name="content" rows="4" required></textarea>
+                    
+                    <button type="submit">Submit Comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2024 Mystique Matters. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Function to check session
+        var userName = ""; // Will store the actual user name if logged in
+
+        function checkSession() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/auth/check_session', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    userName = response.user_name;
+                    updateNavLinks(true);
+                    showNewCommentForm(true);
+                } else {
+                    updateNavLinks(false);
+                    showNewCommentForm(false);
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Request failed');
+                updateNavLinks(false);
+                showNewCommentForm(false);
+            };
+            xhr.send();
+        }
+
+        // Update Navigation Links based on authentication status
+        function updateNavLinks(isLoggedIn) {
+            var navLinks = document.getElementById('navLinks');
+            navLinks.innerHTML = ''; // Clear existing links
+
+            if (isLoggedIn) {
+                // Create Profile link
+                var profileLink = document.createElement('a');
+                profileLink.href = '/profile';
+                profileLink.textContent = 'Profile';
+                navLinks.appendChild(profileLink);
+
+                // Create Logout button
+                var logoutButton = document.createElement('a');
+                logoutButton.href = '#';
+                logoutButton.textContent = 'Logout';
+                logoutButton.classList.add('logout-button');
+                logoutButton.onclick = function(event) {
+                    event.preventDefault();
+                    logout();
+                };
+                navLinks.appendChild(logoutButton);
+            } else {
+                // Create Login link
+                var loginLink = document.createElement('a');
+                loginLink.href = '/login';
+                loginLink.textContent = 'Login';
+                navLinks.appendChild(loginLink);
+
+                // Create Register link
+                var registerLink = document.createElement('a');
+                registerLink.href = '/register';
+                registerLink.textContent = 'Register';
+                navLinks.appendChild(registerLink);
+            }
+        }
+
+        // Function to logout the user
+        function logout() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/auth/logout', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert("Logged out successfully!");
+                    updateNavLinks(false);
+                    showNewCommentForm(false);
+                } else {
+                    alert("Failed to logout: " + xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                alert("Request failed.");
+            };
+            xhr.send(JSON.stringify({})); // Send empty body or as required by your backend
+        }
+
+        // Function to get query parameter by name
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Function to fetch and display the post details
+        function fetchPostDetails() {
+            const postId = getQueryParam('post_id');
+            if (!postId) {
+                displayError("No post ID provided.");
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/blog/post?post_id=' + encodeURIComponent(postId), true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    var post = JSON.parse(xhr.responseText);
+                    displayPost(post);
+                    fetchComments(postId);
+                } else {
+                    displayError("Failed to load post: " + xhr.statusText);
+                }
+            };
+            xhr.onerror = function() {
+                displayError("Request failed.");
+            };
+            xhr.send();
+        }
+
+        // Function to display the post details
+        function displayPost(post) {
+            document.getElementById('postTitle').innerText = sanitizeHTML(post.title);
+            document.getElementById('postMeta').innerText = `By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}`;
+
+            if (post.photo_url) {
+                var postImage = document.getElementById('postImage');
+                postImage.src = post.photo_url;
+                postImage.style.display = 'block';
+            }
+
+            document.getElementById('postContent').innerHTML = sanitizeHTML(post.content).replace(/\n/g, '<br>');
+
+            // Display tags
+            displayTags(post.tags);
+        }
+
+        // Function to display tags
+        function displayTags(tags) {
+            var postTagsContainer = document.getElementById('postTags');
+            postTagsContainer.innerHTML = ''; // Clear existing tags
+
+            if (tags && tags.length > 0) {
+                tags.forEach(function(tag) {
+                    var tagLink = document.createElement('a');
+                    tagLink.href = '/tags/' + encodeURIComponent(tag);
+                    tagLink.classList.add('tag');
+                    tagLink.textContent = tag;
+                    postTagsContainer.appendChild(tagLink);
+                });
+            }
+        }
+
+        // Function to display an error message
+        function displayError(message) {
+            var container = document.querySelector('.container');
+            container.innerHTML = `<p style="color: red;">${sanitizeHTML(message)}</p>`;
+        }
+
+        // Utility function to sanitize HTML to prevent XSS
+        function sanitizeHTML(str) {
+            var temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
+        // Function to fetch and display comments
+        function fetchComments(postId) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/blog/post/comments?post_id=' + encodeURIComponent(postId), true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var comments = JSON.parse(xhr.responseText);
+                    displayComments(comments);
+                } else {
+                    console.error('Failed to fetch comments:', xhr.statusText);
+                    document.getElementById('commentsList').innerHTML = '<p class="no-comments">Failed to load comments.</p>';
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Request failed');
+                document.getElementById('commentsList').innerHTML = '<p class="no-comments">Failed to load comments.</p>';
+            };
+            xhr.send();
+        }
+
+        // Function to display comments
+        function displayComments(comments) {
+            var commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = ''; // Clear existing comments
+
+            if (comments.length > 0) {
+                comments.forEach(function(comment) {
+                    var commentDiv = document.createElement('div');
+                    commentDiv.classList.add('comment');
+                    commentDiv.innerHTML = `
+                        <span class="comment-author">${sanitizeHTML(comment.author)}</span>
+                        <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
+                        <div class="comment-content">${sanitizeHTML(comment.content).replace(/\n/g, '<br>')}</div>
+                    `;
+                    commentsList.appendChild(commentDiv);
+                });
+            } else {
+                commentsList.innerHTML = '<p class="no-comments">No comments yet. Be the first to comment!</p>';
+            }
+        }
+
+        // Function to show or hide the new comment form based on authentication
+        function showNewCommentForm(isLoggedIn) {
+            var newCommentForm = document.getElementById('newCommentForm');
+            if (isLoggedIn) {
+                newCommentForm.style.display = 'block';
+                // Optionally, pre-fill the author name if available
+                document.getElementById('commentAuthor').value = userName;
+            } else {
+                newCommentForm.style.display = 'none';
+            }
+        }
+
+        // Function to handle comment submission
+        function handleCommentSubmission(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            var postId = getQueryParam('post_id');
+            if (!postId) {
+                alert("Invalid post ID.");
+                return;
+            }
+
+            var author = document.getElementById('commentAuthor').value.trim();
+            var content = document.getElementById('commentContent').value.trim();
+
+            if (!author || !content) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/blog/post/comments', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.onload = function() {
+                if (xhr.status === 201) {
+                    alert("Comment added successfully!");
+                    document.getElementById('commentForm').reset();
+                    fetchComments(postId); // Refresh comments
+                } else {
+                    alert("Failed to add comment: " + xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                alert("Request failed.");
+            };
+            xhr.send(JSON.stringify({
+                post_id: postId,
+                author: author,
+                content: content
+            }));
+        }
+
+        // Initialize
+        window.onload = function() {
+            checkSession();
+            fetchPostDetails();
+
+            // Attach event listener to comment form
+            var commentForm = document.getElementById('commentForm');
+            if (commentForm) {
+                commentForm.addEventListener('submit', handleCommentSubmission);
+            }
+        };
+    </script>
+
+</body>
+</html>

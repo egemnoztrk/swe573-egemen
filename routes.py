@@ -1,78 +1,106 @@
 from dataclasses import dataclass
 from datetime import datetime
+import traceback
 from bson import ObjectId
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 from werkzeug.utils import secure_filename
 
-from models.blogpost import BlogPost
+from models.blog_post import BlogPost
 from models.user import User
+from models.comment import Comment
+from models.db import db
 
 # Configure upload folder and allowed file extensions
-UPLOAD_FOLDER = './uploads'  # Path to store uploaded files locally
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'txt', 'doc', 'docx'}
 
+
 class FlaskApp:
-    def __init__(self, secret_key: str, mongo_uri: str, mongo_db_name: str):
-        self.app = Flask(__name__)
-        self.app.debug = True
+    def __init__(self, secret_key: str, mysql_uri: str):
+        self.app = Flask(__name__, static_folder='static')
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = mysql_uri
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         self.app.secret_key = secret_key
-        self.mongo_uri = mongo_uri
-        self.mongo_db_name = mongo_db_name
-        self.mongo_client = self.connect_to_mongo()
+        self.app.config['UPLOAD_FOLDER'] = './uploads'
+        db.init_app(self.app)
+        with self.app.app_context():
+            db.create_all()
         self.register_routes()
 
-    def connect_to_mongo(self):
-        mongo_client = MongoClient(self.mongo_uri)
-        db_name = self.mongo_db_name
-        self.db = mongo_client[db_name]
-        print(f"Connected to MongoDB database: {db_name}")
-        return mongo_client
-
     def register_routes(self):
-        AuthRoutes(self.app, self.db) 
-        BlogRoutes(self.app, self.db)
+        AuthRoutes(self.app)
+        BlogRoutes(self.app)
+
+        # Serve index.html on the root route
+        @self.app.route('/')
+        def serve_index():
+            return send_from_directory(self.app.static_folder, 'index.html') # type: ignore
+        
+        @self.app.route('/login')
+        def serve_login():
+            return send_from_directory(self.app.static_folder, 'login.html') # type: ignore
+        
+        @self.app.route('/register')
+        def serve_register():
+            return send_from_directory(self.app.static_folder, 'register.html') # type: ignore
+        
+        @self.app.route('/profile')
+        def serve_profile():
+            return send_from_directory(self.app.static_folder, 'profile.html') # type: ignore
+        
+        @self.app.route('/post')
+        def serve_post():
+            return send_from_directory(self.app.static_folder, 'post.html') # type: ignore
+                
+        # New route to serve uploaded files
+        @self.app.route('/uploads/<filename>')
+        def uploaded_file(filename):
+            # Serve the file from the configured upload folder
+            return send_from_directory(self.app.config['UPLOAD_FOLDER'], filename)
 
     def run(self):
         self.app.run()
 
 
 class AuthRoutes:
-    def __init__(self, app: Flask, db):
+    def __init__(self, app: Flask):
         self.app = app
-        self.db = db
         self.initialize_routes()
 
     def initialize_routes(self):
-        @self.app.route('/')
-        def index():
-            return jsonify({"message": "Welcome to the Flask App with MongoDB"})
-
-        @self.app.route('/register', methods=['POST'])
+        @self.app.route('/auth/register', methods=['POST'])
         def register():
-            data = request.json
-            if not data or not data.get('email') or not data.get('password'):
-                return jsonify({"error": "Email and password are required"}), 400
+            try:
+                data = request.json
+                if not data or not data.get('email') or not data.get('password'):
+                    return jsonify({"error": "Email and password are required"}), 400
 
-            existing_user = self.db['users'].find_one({"email": data['email']})
-            if existing_user:
-                return jsonify({"error": "User already exists"}), 400
+                # Check if the user already exists
+                if User.query.filter_by(email=data['email']).first():
+                    return jsonify({"error": "User already exists"}), 400
 
-            password_hash = generate_password_hash(data['password'])
-            user = User(
-                name=data.get('name'),
-                email=data['email'],
-                age=data.get('age', 18),
-                password_hash=password_hash
-            )
+                # Hash the password and create a new user
+                user = User(
+                    name=data.get('name', 'Anonymous'),
+                    email=data['email'],
+                    password_hash=data['password'],
+                    age=data.get('age', 18)
+                )
 
-            self.db['users'].insert_one(user.to_dict())
-            return jsonify({"message": "User registered successfully!"}), 201
+                # Add the user to the session and commit
+                db.session.add(user)
+                db.session.commit()
 
-        @self.app.route('/login', methods=['POST'])
+                return jsonify({"message": "User registered successfully!"}), 201
+            except:
+                print(traceback.format_exc())
+                return jsonify({"error": "An error occurred while registering the user"}), 500
+
+        @self.app.route('/auth/login', methods=['POST'])
         def login():
             data = request.json
             if not data:
@@ -80,44 +108,57 @@ class AuthRoutes:
             if not data.get('email') or not data.get('password'):
                 return jsonify({"error": "Email and password are required"}), 400
 
-            user = self.db['users'].find_one({"email": data['email']})
-            if not user or not check_password_hash(user['password_hash'], data['password']):
+            # Find user by email
+            user = User.query.filter_by(email=data['email']).first()
+            if not user:
+                return jsonify({"error": "Invalid email"}), 401
+            if user.password_hash != data['password']:
                 return jsonify({"error": "Invalid email or password"}), 401
 
-            # Create session for the user
-            session['user_id'] = str(user['_id'])
-            session['user_name'] = user['name']
-            return jsonify({"message": f"Welcome {user['name']}!"}), 200
+            # Create a session for the user
+            session['user_id'] = user.id
+            session['user_name'] = user.name
+            return jsonify({"message": f"Welcome {user.name}!"}), 200
 
-        @self.app.route('/logout', methods=['POST'])
+        @self.app.route('/auth/logout', methods=['POST'])
         def logout():
+            # Clear the session data
             session.clear()
             return jsonify({"message": "Successfully logged out!"}), 200
 
-        @self.app.route('/profile', methods=['GET'])
+        @self.app.route('/auth/profile', methods=['GET'])
         def profile():
+            # Check if the user is logged in
             if 'user_id' not in session:
                 return jsonify({"error": "Unauthorized access!"}), 401
 
-            user = self.db['users'].find_one({"_id": ObjectId(session['user_id'])})
+            # Retrieve the user data from the database
+            user = User.query.get(session['user_id'])
             if user:
                 user_data = {
-                    "name": user['name'],
-                    "email": user['email'],
-                    "age": user['age'],
-                    "role": user['role']
+                    "name": user.name,
+                    "email": user.email,
+                    "age": user.age,
+                    "role": user.role
                 }
                 return jsonify(user_data), 200
+
             return jsonify({"error": "User not found!"}), 404
+        
+        @self.app.route('/auth/check_session', methods=['GET'])
+        def check_session():
+            if 'user_id' in session:
+                return jsonify({"message": "Session active", "user_name": session['user_name']}), 200
+            return jsonify({"error": "No active session"}), 401
+
 
 class BlogRoutes:
-    def __init__(self, app: Flask, db):
+    def __init__(self, app: Flask):
         self.app = app
-        self.app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-        self.db = db
-        self.initialize_routes()
         
-    # Function to check allowed extensions
+        self.initialize_routes()
+
+    # Helper method to check allowed file extensions
     def allowed_file(self, filename):
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -130,25 +171,24 @@ class BlogRoutes:
             if not data or not data.get('title') or not data.get('content'):
                 return jsonify({"error": "Title and content are required"}), 400
 
+            # Handle file uploads
             photo_url = None
             if 'photo' in files and files['photo'].filename != '':
                 photo = files['photo']
-                filename = secure_filename(photo.filename) # type: ignore
                 if self.allowed_file(photo.filename):
+                    filename = secure_filename(photo.filename) # type: ignore
                     photo.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
                     photo_url = f"/uploads/{filename}"
 
             file_url = None
             if 'file' in files and files['file'].filename != '':
                 file = files['file']
-                filename = secure_filename(file.filename) # type: ignore
                 if self.allowed_file(file.filename):
+                    filename = secure_filename(file.filename) # type: ignore
                     file.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
                     file_url = f"/uploads/{filename}"
 
-            tags = data.get('tags', "").split(",") if data.get('tags') else []
-            status = data.get('status', "NEW")
-
+            # Create a new blog post instance
             post = BlogPost(
                 title=data['title'],
                 content=data['content'],
@@ -156,199 +196,89 @@ class BlogRoutes:
                 is_published=bool(data.get('is_published', False)),
                 photo_url=photo_url,
                 file_url=file_url,
-                tags=tags,
-                status=status
+                tags=",".join(data.get('tags', "").split(",")),
+                status=data.get('status', "NEW")
             )
 
-            self.db['blog_posts'].insert_one(post.to_dict())
+            db.session.add(post)
+            db.session.commit()
             return jsonify({"message": "Post created successfully!"}), 201
 
         @self.app.route('/blog/post/status', methods=['PUT'])
         def update_status():
-            """Update the status of a specific blog post (NEW or CLOSED)."""
             data = request.json
             if not data or 'post_id' not in data:
                 return jsonify({"error": "Post ID is required"}), 400
             if 'status' not in data or data['status'] not in ['NEW', 'CLOSED']:
                 return jsonify({"error": "Invalid or missing status"}), 400
 
-            post = self.db['blog_posts'].find_one({"_id": ObjectId(data['post_id'])})
+            # Find the post by ID
+            post = BlogPost.query.get(data['post_id'])
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
             # Update the post's status
-            self.db['blog_posts'].update_one({"_id": ObjectId(data['post_id'])}, {"$set": {"status": data['status']}})
+            post.status = data['status']
+            db.session.commit()
             return jsonify({"message": "Post status updated successfully!"})
 
         @self.app.route('/blog/post/comments', methods=['POST'])
         def add_comment():
-            """Add a comment to a specific blog post."""
             data = request.json
             if not data or not data.get('post_id') or not data.get('comment'):
                 return jsonify({"error": "Post ID and Comment text are required"}), 400
 
-            post = self.db['blog_posts'].find_one({"_id": ObjectId(data['post_id'])})
+            # Find the post by ID
+            post = BlogPost.query.get(data['post_id'])
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
-            # Create comment data
-            comment = {
-                "author": session.get('user_name', 'Anonymous'),
-                "comment": data['comment'],
-                "created_at": datetime.utcnow()
-            }
-
-            # Append the comment to the comments array
-            self.db['blog_posts'].update_one(
-                {"_id": ObjectId(data['post_id'])},
-                {"$push": {"comments": comment}}
+            # Create a new comment instance
+            comment = Comment(
+                blog_post_id=post.id,
+                author=session.get('user_name', 'Anonymous'),
+                comment=data['comment'],
+                created_at=datetime.utcnow()
             )
 
+            db.session.add(comment)
+            db.session.commit()
             return jsonify({"message": "Comment added successfully!"})
 
         @self.app.route('/blog/post', methods=['GET'])
         def get_post():
-            """Retrieve a specific blog post by its ID."""
             post_id = request.args.get('post_id')
             if not post_id:
                 return jsonify({"error": "Post ID is required"}), 400
 
-            post = self.db['blog_posts'].find_one({"_id": ObjectId(post_id)})
+            # Find the post by ID
+            post = BlogPost.query.get(post_id)
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
-            return jsonify({
-                "_id": str(post["_id"]),
-                "title": post["title"],
-                "content": post["content"],
-                "author": post["author"],
-                "created_at": post["created_at"],
-                "is_published": post["is_published"],
-                "photo_url": post.get("photo_url"),
-                "file_url": post.get("file_url"),
-                "tags": post.get("tags", []),
-                "status": post.get("status", "NEW"),
-                "comments": post.get("comments", [])
-            })
+            return jsonify(post.to_dict())
 
         @self.app.route('/blog/posts', methods=['GET'])
         def get_posts():
-            """Retrieve all blog posts."""
-            posts = self.db['blog_posts'].find()
-            result = [{
-                "_id": str(post["_id"]),
-                "title": post["title"],
-                "content": post["content"],
-                "author": post["author"],
-                "created_at": post["created_at"],
-                "is_published": post["is_published"],
-                "photo_url": post.get("photo_url"),
-                "file_url": post.get("file_url"),
-                "tags": post.get("tags", []),
-                "status": post.get("status", "NEW"),
-                "comments": post.get("comments", [])
-            } for post in posts]
-            return jsonify(result)
+            # Get the 'limit' parameter from the query string, defaulting to None if not provided
+            limit = request.args.get('limit', type=int)
 
-        @self.app.route('/blog/favorite', methods=['POST'])
-        def favorite_post():
-            """Favorite or unfavorite a blog post."""
-            if 'user_id' not in session:
-                return jsonify({"error": "Unauthorized access!"}), 401
-
-            data = request.json
-            if not data:
-                return jsonify({"error": "No data provided"}), 400
-            post_id = data.get('post_id')
-
-            if not post_id:
-                return jsonify({"error": "Post ID is required"}), 400
-
-            user = self.db['users'].find_one({"_id": ObjectId(session['user_id'])})
-            if not user:
-                return jsonify({"error": "User not found!"}), 404
-
-            # Check if the post exists
-            post = self.db['blog_posts'].find_one({"_id": ObjectId(post_id)})
-            if not post:
-                return jsonify({"error": "Post not found!"}), 404
-
-            # Check if the post is already in the user's favorites
-            if post_id in user.get('favorites', []):
-                # Unfavorite the post
-                self.db['users'].update_one(
-                    {"_id": ObjectId(session['user_id'])},
-                    {"$pull": {"favorites": post_id}}
-                )
-                return jsonify({"message": "Post unfavorited!"}), 200
+            # Query the database, applying the limit if provided
+            if limit:
+                posts = BlogPost.query.limit(limit).all()
             else:
-                # Favorite the post
-                self.db['users'].update_one(
-                    {"_id": ObjectId(session['user_id'])},
-                    {"$push": {"favorites": post_id}}
-                )
-                return jsonify({"message": "Post favorited!"}), 200
+                posts = BlogPost.query.all()
 
-        @self.app.route('/user/favorites', methods=['GET'])
-        def get_favorites():
-            """Retrieve the list of user's favorited blog posts."""
-            if 'user_id' not in session:
-                return jsonify({"error": "Unauthorized access!"}), 401
+            # Convert posts to dictionary format for JSON response
+            result = [post.to_dict() for post in posts]
+            return jsonify(result), 200
 
-            user = self.db['users'].find_one({"_id": ObjectId(session['user_id'])})
-            if not user:
-                return jsonify({"error": "User not found!"}), 404
+        @self.app.route('/blog/posts/user', methods=['GET'])
+        def get_user_posts():
+            user_name = request.args.get('user_name') or session.get('user_name')
+            if not user_name:
+                return jsonify({"error": "User name is required"}), 400
 
-            favorite_post_ids = user.get('favorites', [])
-            favorite_posts = self.db['blog_posts'].find({"_id": {"$in": [ObjectId(post_id) for post_id in favorite_post_ids]}})
-
-            result = [{
-                "_id": str(post["_id"]),
-                "title": post["title"],
-                "content": post["content"],
-                "author": post["author"],
-                "created_at": post["created_at"],
-                "is_published": post["is_published"],
-                "photo_url": post.get("photo_url"),
-                "file_url": post.get("file_url"),
-                "tags": post.get("tags", []),
-                "status": post.get("status", "NEW"),
-                "comments": post.get("comments", [])
-            } for post in favorite_posts]
-
-            return jsonify(result)
-        
-
-        @self.app.route('/blog/unfavorite', methods=['POST'])
-        def unfavorite_post():
-            """Unfavorite a blog post."""
-            if 'user_id' not in session:
-                return jsonify({"error": "Unauthorized access!"}), 401
-
-            data = request.json
-            if not data:
-                return jsonify({"error": "No data provided"}), 400
-            post_id = data.get('post_id')
-
-            if not post_id:
-                return jsonify({"error": "Post ID is required"}), 400
-
-            user = self.db['users'].find_one({"_id": ObjectId(session['user_id'])})
-            if not user:
-                return jsonify({"error": "User not found!"}), 404
-
-            # Check if the post exists
-            post = self.db['blog_posts'].find_one({"_id": ObjectId(post_id)})
-            if not post:
-                return jsonify({"error": "Post not found!"}), 404
-
-            # Check if the post is already in the user's favorites
-            if post_id in user.get('favorites', []):
-                # Unfavorite the post
-                self.db['users'].update_one(
-                    {"_id": ObjectId(session['user_id'])},
-                    {"$pull": {"favorites": post_id}}
-                )
-                return jsonify({"message": "Post unfavorited!"}), 200
-            else:
-                return jsonify({"error": "Post not in favorites!"}), 400
+            posts = BlogPost.query.filter_by(author=user_name).all()
+            result = [post.to_dict() for post in posts]
+            return jsonify(result), 200
