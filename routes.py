@@ -63,7 +63,7 @@ class FlaskApp:
             return send_from_directory(self.app.config['UPLOAD_FOLDER'], filename)
 
     def run(self):
-        self.app.run()
+        self.app.run(host='0.0.0.0', port=5000)
 
 
 class AuthRoutes:
