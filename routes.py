@@ -279,7 +279,7 @@ class BlogRoutes:
 
             try:
                 posts = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(limit).all()                
-                posts = list(reversed(posts))
+                posts = list(posts)
                 result = [post.to_dict() for post in posts]
                 return jsonify(result), 200
             except Exception as e:
