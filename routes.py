@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+import json
 import traceback
 from bson import ObjectId
 from flask import Flask, request, jsonify, session, send_from_directory
@@ -173,8 +174,21 @@ class BlogRoutes:
             data = request.form
             files = request.files
 
-            if not data or not data.get('title') or not data.get('content'):
-                return jsonify({"error": "Title and content are required"}), 400
+            # Validate required fields
+            if not data:
+                return jsonify("No data provided")
+            
+            if not data.get('title'):
+                return jsonify("Title is required")
+            
+            if not data.get('content'):
+                return jsonify("Content is required")
+            
+            if 'photo' not in files or files['photo'].filename == '':
+                return jsonify("Photo is required")
+            
+            if not data.get('tags'):
+                return jsonify("Tags are required"), 400
 
             # Handle file uploads
             photo_url = None
@@ -193,21 +207,43 @@ class BlogRoutes:
                     file.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
                     file_url = f"/uploads/{filename}"
 
+            # Handle attributes
+            attributes = {}
+            attributes_data = data.get('attributes')
+            if attributes_data:
+                try:
+                    attributes = json.loads(attributes_data)
+                    if not isinstance(attributes, dict):
+                        return jsonify({"error": "Attributes must be a JSON object"}), 400
+                except json.JSONDecodeError:
+                    return jsonify({"error": "Invalid JSON format for attributes"}), 400
+
+            # Handle tags
+            tags = data.get('tags', "")
+            tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            tags_str = ",".join(tags_list) if tags_list else None
+
             # Create a new blog post instance
             post = BlogPost(
                 title=data['title'],
                 content=data['content'],
                 author=session.get('user_name', 'Anonymous'),
-                is_published=bool(data.get('is_published', False)),
+                is_published=bool(int(data.get('is_published', 0))),  # Convert to bool
                 photo_url=photo_url,
                 file_url=file_url,
-                tags=",".join(data.get('tags', "").split(",")),
-                status=data.get('status', "NEW")
+                tags=tags_str,
+                status=data.get('status', "NEW"),
+                attributes=attributes  # Pass the attributes dictionary
             )
 
-            db.session.add(post)
-            db.session.commit()
-            return jsonify({"message": "Post created successfully!"}), 201
+            try:
+                db.session.add(post)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"error": "An error occurred while creating the post.", "details": str(e)}), 500
+
+            return jsonify({"message": "Post created successfully!", "post_id": post.id}), 201
 
         @self.app.route('/blog/post/status', methods=['PUT'])
         def update_status():
@@ -238,6 +274,7 @@ class BlogRoutes:
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
+            print(f"New comment for post: {post.id}, Comment: {data['comment']}, Author: {session.get('user_name', 'Anonymous')}")
             # Create a new comment instance
             comment = Comment(
                 blog_post_id=post.id,
@@ -250,6 +287,22 @@ class BlogRoutes:
             db.session.commit()
             return jsonify({"message": "Comment added successfully!"})
 
+        @self.app.route('/blog/post/comments', methods=['GET'])
+        def get_comments():
+            post_id = request.args.get('post_id')
+            if not post_id:
+                return jsonify({"error": "Post ID is required"}), 400
+
+            # Find the post by ID
+            post = BlogPost.query.get(post_id)
+            if not post:
+                return jsonify({"error": "Post not found"}), 404
+
+            comments = Comment.query.filter_by(blog_post_id=post.id).all()
+            result = [comment.to_dict() for comment in comments]
+            result.reverse()  # Reverse the order of comments
+            return jsonify(result)
+        
         @self.app.route('/blog/post', methods=['GET'])
         def get_post():
             post_id = request.args.get('post_id')
