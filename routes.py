@@ -218,9 +218,23 @@ class BlogRoutes:
                 except json.JSONDecodeError:
                     return jsonify({"error": "Invalid JSON format for attributes"}), 400
 
-            # Handle tags
-            tags = data.get('tags', "")
-            tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            # Retrieve 'tags' from data, defaulting to an empty list if not present
+            tags = data.get('tags', [])
+
+            # Ensure that 'tags' is a list. If it's a string (e.g., a JSON string), parse it.
+            if isinstance(tags, str):
+                try:
+                    tags = json.loads(tags)
+                    if not isinstance(tags, list):
+                        raise ValueError("Parsed tags is not a list.")
+                except (json.JSONDecodeError, ValueError) as e:
+                    # Handle the error as needed, for example:
+                    tags = [tag.strip() for tag in tags.split(",") if tag.strip()] # type: ignore
+
+            # Now, process the tags list: strip whitespace and filter out any empty strings
+            tags_list = [tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()]
+
+            # Join the list into a comma-separated string, or set to None if the list is empty
             tags_str = ",".join(tags_list) if tags_list else None
 
             # Create a new blog post instance

@@ -320,6 +320,34 @@
             font-weight: 500;
             color: #333;
         }
+
+        /* Container for the tags input and suggestions */
+        .tags-input-container {
+            position: relative;
+        }
+
+        /* Suggestions Dropdown */
+        .tags-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ccc;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none; /* Hidden by default */
+        }
+
+        .tags-suggestions div {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .tags-suggestions div:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -356,18 +384,22 @@
         <form id="postForm" enctype="multipart/form-data">
             <!-- Existing Fields -->
             <label for="postTitle">Title</label>
-            <input type="text" id="postTitle" name="title" required> <!-- Already Required -->
+            <input type="text" id="postTitle" name="title" required>
 
             <label for="postContent">Content</label>
-            <textarea id="postContent" name="content" rows="5" required></textarea> <!-- Already Required -->
+            <textarea id="postContent" name="content" rows="5" required></textarea>
 
+            <!-- Tags Input Field and Suggestions -->
             <label for="postTags">Tags <small>(separated by commas)</small></label>
-            <input type="text" id="postTags" name="tags" placeholder="e.g., mystery, science, history" required> <!-- Added required -->
+            <div class="tags-input-container">
+                <input type="text" id="postTags" name="tags" placeholder="e.g., mystery, science, history" required>
+                <div id="tagsSuggestions" class="tags-suggestions"></div>
+            </div>
 
             <input type="hidden" id="postAuthor" name="author" readonly>
 
             <label for="postPhoto">Photo</label>
-            <input type="file" id="postPhoto" name="photo" accept="image/*" required> <!-- Added required -->
+            <input type="file" id="postPhoto" name="photo" accept="image/*" required>
 
             <!-- Toggle Button for Additional Attributes -->
             <button type="button" id="toggleAttributesButton">Add Additional Attributes</button>
@@ -563,15 +595,15 @@
             var formData = new FormData(form);
 
             // Get the tags from the input and format them
-            var tagsInput = document.getElementById('postTags').value;
-            var tagsArray = tagsInput.split(',').map(function(tag) {
+            var tagsInputValue = document.getElementById('postTags').value;
+            var tagsArray = tagsInputValue.split(',').map(function(tag) {
                 return tag.trim();
             }).filter(function(tag) {
                 return tag.length > 0;
             });
 
             // Append tags as JSON string or as per backend requirement
-            formData.set('tags', tagsArray);
+            formData.set('tags', JSON.stringify(tagsArray));
 
             // Collect additional attributes
             var attributes = {
@@ -617,16 +649,109 @@
             checkSession();
             fetchLatestPosts();
         };
+
         document.getElementById('toggleAttributesButton').addEventListener('click', function() {
-        var additionalAttributes = document.getElementById('additionalAttributes');
-        if (additionalAttributes.style.display === 'none') {
-            additionalAttributes.style.display = 'block';
-            this.textContent = 'Hide Additional Attributes';
-        } else {
-            additionalAttributes.style.display = 'none';
-            this.textContent = 'Add Additional Attributes';
+            var additionalAttributes = document.getElementById('additionalAttributes');
+            if (additionalAttributes.style.display === 'none') {
+                additionalAttributes.style.display = 'block';
+                this.textContent = 'Hide Additional Attributes';
+            } else {
+                additionalAttributes.style.display = 'none';
+                this.textContent = 'Add Additional Attributes';
+            }
+        });
+
+        // Get the tags input field and suggestions container
+        var tagsInput = document.getElementById('postTags');
+        var tagsSuggestions = document.getElementById('tagsSuggestions');
+
+        // Debounce function to limit API calls
+        function debounce(func, delay) {
+            var debounceTimer;
+            return function() {
+                var context = this;
+                var args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    func.apply(context, args);
+                }, delay);
+            }
         }
-    });
+
+        // Event listener for input changes in the tags field
+        tagsInput.addEventListener('input', debounce(function(e) {
+            var inputValue = tagsInput.value;
+            var tagsArray = inputValue.split(',');
+            var currentTag = tagsArray[tagsArray.length - 1].trim();
+            if (currentTag.length >= 2) {
+                searchWikidata(currentTag);
+            } else {
+                tagsSuggestions.style.display = 'none';
+            }
+        }, 300));
+
+        // Function to search Wikidata for tag suggestions
+        function searchWikidata(query) {
+            var xhr = new XMLHttpRequest();
+            var url = 'https://www.wikidata.org/w/api.php?action=wbsearchentities&search=' + encodeURIComponent(query) + '&language=en&format=json&origin=*';
+            xhr.open('GET', url, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    displayTagSuggestions(response.search);
+                } else {
+                    console.error('Wikidata API request failed:', xhr.statusText);
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Wikidata API request failed.');
+            };
+            xhr.send();
+        }
+
+        // Function to display tag suggestions in the dropdown
+        function displayTagSuggestions(suggestions) {
+            // Clear previous suggestions
+            tagsSuggestions.innerHTML = '';
+            if (suggestions.length === 0) {
+                tagsSuggestions.style.display = 'none';
+                return;
+            }
+            // Limit the number of suggestions
+            var maxSuggestions = 100;
+            for (var i = 0; i < Math.min(suggestions.length, maxSuggestions); i++) {
+                var suggestion = suggestions[i];
+                var suggestionDiv = document.createElement('div');
+                suggestionDiv.textContent = suggestion.label;
+                suggestionDiv.dataset.label = suggestion.label;
+                suggestionDiv.addEventListener('click', function(e) {
+                    selectTagSuggestion(e.target.dataset.label);
+                });
+                tagsSuggestions.appendChild(suggestionDiv);
+            }
+            // Show the suggestions dropdown
+            tagsSuggestions.style.display = 'block';
+        }
+
+        // Function to handle selection of a tag suggestion
+        function selectTagSuggestion(label) {
+            var inputValue = tagsInput.value;
+            var tagsArray = inputValue.split(',');
+            // Replace the last tag with the selected suggestion
+            tagsArray[tagsArray.length - 1] = ' ' + label;
+            tagsInput.value = tagsArray.join(',').trim() + ', '; // Add comma and space for next tag
+            // Hide suggestions
+            tagsSuggestions.style.display = 'none';
+            // Focus back to the input field
+            tagsInput.focus();
+        }
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== tagsInput && e.target.parentNode !== tagsSuggestions) {
+                tagsSuggestions.style.display = 'none';
+            }
+        });
     </script>
 
 </body>
