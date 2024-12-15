@@ -7,8 +7,6 @@ from flask import Flask, request, jsonify, session, send_from_directory, make_re
 from flask_sqlalchemy import SQLAlchemy
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
-from PIL import Image # type: ignore
-import io
 
 import os
 from werkzeug.utils import secure_filename
@@ -194,29 +192,8 @@ class BlogRoutes:
             if 'photo' in files and files['photo'].filename != '':
                 photo = files['photo']
                 if self.allowed_file(photo.filename):
-                    original_data = photo.read()
-                    
-                    # Open the image with Pillow
-                    try:
-                        img = Image.open(io.BytesIO(original_data))
-                    except Exception:
-                        return jsonify({"error": "Invalid image file"}), 400
-
-                    # Example resizing: if width > 800px, we resize it to 800px max
-                    max_width = 800
-                    if img.width > max_width:
-                        # Calculate the new height maintaining aspect ratio
-                        aspect_ratio = img.height / img.width
-                        new_height = int(max_width * aspect_ratio)
-                        img = img.resize((max_width, new_height), Image.ANTIALIAS)
-
-                    # Convert image back to bytes (JPEG format, quality 85)
-                    # You can adjust the format and quality as needed.
-                    output = io.BytesIO()
-                    img.save(output, format='JPEG', quality=85)
-                    output.seek(0)
-                    photo_data = output.read()
-                    photo_mimetype = "image/jpeg"
+                    photo_data = photo.read()  # Read image content
+                    photo_mimetype = photo.mimetype  # Store mimetype
                 else:
                     return jsonify({"error": "File type not allowed"}), 400
 
@@ -251,7 +228,7 @@ class BlogRoutes:
             tags_list = [tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()]
             tags_str = ",".join(tags_list) if tags_list else None
 
-            # Create a new blog post instance with the resized/compressed photo
+            # Create a new blog post instance with photo stored in DB
             post = BlogPost(
                 title=data['title'],
                 content=data['content'],
