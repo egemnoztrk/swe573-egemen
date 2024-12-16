@@ -184,10 +184,6 @@
             <p id="email">Loading...</p>
         </div>
         <div class="profile-info">
-            <label for="age">Age:</label>
-            <p id="age">Loading...</p>
-        </div>
-        <div class="profile-info">
             <label for="role">Role:</label>
             <p id="role">Loading...</p>
         </div>
@@ -229,7 +225,6 @@
                         // Populate the profile data
                         document.getElementById("name").innerText = sanitizeHTML(data.name);
                         document.getElementById("email").innerText = sanitizeHTML(data.email);
-                        document.getElementById("age").innerText = data.age ? sanitizeHTML(data.age.toString()) : "Not specified";
                         document.getElementById("role").innerText = sanitizeHTML(data.role || "User");
                     }
                 })

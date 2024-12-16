@@ -111,10 +111,6 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <div class="input-group">
-                <label for="age">Age (optional)</label>
-                <input type="number" id="age" name="age" min="1" max="120">
-            </div>
             <button type="submit">Register</button>
             <div class="error-message" id="errorMessage"></div>
             <div class="success-message" id="successMessage"></div>
@@ -133,7 +129,6 @@
             var name = document.getElementById('name').value;
             var email = document.getElementById('email').value;
             var password = document.getElementById('password').value;
-            var age = document.getElementById('age').value || 18;  // Default to 18 if age is not provided
 
             // Client-side validation for email and password
             if (!name || !email || !password) {
@@ -162,7 +157,7 @@
                 name: name,
                 email: email,
                 password: password,
-                age: age
+                age: 18
             }));
         });
     </script>
