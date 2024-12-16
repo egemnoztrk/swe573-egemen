@@ -6,7 +6,6 @@
     <title>Blog Post - Mystique Matters</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -294,6 +293,31 @@
                 font-size: 18px;
             }
         }
+        #postActions {
+            margin-bottom: 20px;
+        }
+
+        #closePostButton {
+            background-color: #dc3545; /* Bootstrap red color */
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+        }
+
+        #closePostButton:hover {
+            background-color: #c82333;
+        }
+
+        #closedMessage {
+            color: #dc3545;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -301,14 +325,13 @@
     <!-- Navigation Bar -->
     <nav>
         <a href="/" class="nav-brand">Mystique Matters</a>
-        <div class="nav-links" id="navLinks">
-            <!-- Links will be dynamically inserted here based on authentication status -->
-        </div>
+        <div class="nav-links" id="navLinks"></div>
     </nav>
 
     <div class="container">
         <!-- Post details will be dynamically inserted here -->
         <h1 id="postTitle" class="post-title">Loading...</h1>
+        <div id="postActions"></div>
         <p id="postMeta" class="post-meta"></p>
         <img id="postImage" class="post-image" src="" alt="Post Image" style="display: none;">
         <div id="postContent" class="post-content"></div>
@@ -319,17 +342,13 @@
         <!-- Attributes Section -->
         <div id="postAttributes" class="post-attributes" style="display: none;">
             <h4>Attributes</h4>
-            <table id="attributesTable">
-                <!-- Attributes will be dynamically inserted here -->
-            </table>
+            <table id="attributesTable"></table>
         </div>
         
         <!-- Comments Section -->
         <div id="commentsSection" class="comments-section">
             <h3>Comments</h3>
-            <div id="commentsList" class="comments-list">
-                <!-- Existing comments will be inserted here -->
-            </div>
+            <div id="commentsList" class="comments-list"></div>
             <div id="newCommentForm" class="new-comment-form" style="display: none;">
                 <h4>Add a Comment</h4>
                 <form id="commentForm">
@@ -348,8 +367,8 @@
     </footer>
 
     <script>
-        // Function to check session
         var userName = ""; // Will store the actual user name if logged in
+        var currentPost = null; // Will hold the current post data
 
         function checkSession() {
             var xhr = new XMLHttpRequest();
@@ -359,16 +378,14 @@
                     var response = JSON.parse(xhr.responseText);
                     userName = response.user_name;
                     updateNavLinks(true);
-                    showNewCommentForm(true);
+                    // We'll show or hide the comment form later based on post status
                 } else {
                     updateNavLinks(false);
-                    showNewCommentForm(false);
                 }
             };
             xhr.onerror = function() {
                 console.error('Request failed');
                 updateNavLinks(false);
-                showNewCommentForm(false);
             };
             xhr.send();
         }
@@ -410,7 +427,6 @@
             }
         }
 
-        // Function to logout the user
         function logout() {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/auth/logout', true);
@@ -419,6 +435,7 @@
                 if (xhr.status === 200) {
                     alert("Logged out successfully!");
                     updateNavLinks(false);
+                    // Hide comment form if user logs out
                     showNewCommentForm(false);
                 } else {
                     alert("Failed to logout: " + xhr.responseText);
@@ -427,16 +444,14 @@
             xhr.onerror = function() {
                 alert("Request failed.");
             };
-            xhr.send(JSON.stringify({})); // Send empty body or as required by your backend
+            xhr.send(JSON.stringify({}));
         }
 
-        // Function to get query parameter by name
         function getQueryParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         }
 
-        // Function to fetch and display the post details
         function fetchPostDetails() {
             const postId = getQueryParam('post_id');
             if (!postId) {
@@ -448,8 +463,8 @@
             xhr.open('GET', '/blog/post?post_id=' + encodeURIComponent(postId), true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
-                    var post = JSON.parse(xhr.responseText);
-                    displayPost(post);
+                    currentPost = JSON.parse(xhr.responseText);
+                    displayPost(currentPost);
                     fetchComments(postId);
                 } else {
                     displayError("Failed to load post: " + xhr.statusText);
@@ -461,7 +476,6 @@
             xhr.send();
         }
 
-        // Function to display the post details
         function displayPost(post) {
             document.getElementById('postTitle').innerText = sanitizeHTML(post.title);
             document.getElementById('postMeta').innerText = `By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}`;
@@ -477,44 +491,69 @@
             document.getElementById('postContent').innerHTML = sanitizeHTML(post.content).replace(/\n/g, '<br>');
 
             // Display tags
-            displayTags(post.tags);
+            if (post.tags && post.tags.length > 0) {
+                // In the backend, tags might be a comma-separated string. If so, split it:
+                var tagsArray = Array.isArray(post.tags) ? post.tags : post.tags.split(',');
+                displayTags(tagsArray);
+            }
 
             // Display attributes
             if (post.attributes && Object.keys(post.attributes).length > 0) {
                 displayAttributes(post.attributes);
             }
+
+            // Handle Close Post button and Closed message
+            var postActions = document.getElementById('postActions');
+            postActions.innerHTML = '';
+
+            // If user is author and post is NEW, show Close Post button
+            if (userName && userName === post.author && post.status === 'NEW') {
+                var closeButton = document.createElement('button');
+                closeButton.id = 'closePostButton';
+                closeButton.innerText = 'Mark as Solved';
+                closeButton.onclick = function() {
+                    closePost(post.id);
+                };
+                postActions.appendChild(closeButton);
+            }
+
+            // If post is CLOSED, show a message and hide new comment form
+            if (post.status === 'CLOSED') {
+                var closedMessage = document.createElement('div');
+                closedMessage.id = 'closedMessage';
+                closedMessage.innerText = 'This post is solved.';
+                postActions.appendChild(closedMessage);
+                showNewCommentForm(false);
+            } else {
+                // If not closed, show comment form if user is logged in
+                showNewCommentForm(!!userName);
+            }
         }
 
-        // Function to display tags
         function displayTags(tags) {
             var postTagsContainer = document.getElementById('postTags');
             postTagsContainer.innerHTML = ''; // Clear existing tags
 
-            if (tags && tags.length > 0) {
-                tags.forEach(function(tag) {
-                    var tagLink = document.createElement('a');
-                    tagLink.href = '/tags/' + encodeURIComponent(tag);
-                    tagLink.classList.add('tag');
-                    tagLink.textContent = tag;
-                    postTagsContainer.appendChild(tagLink);
-                });
-            }
+            tags.forEach(function(tag) {
+                var tagLink = document.createElement('a');
+                tagLink.href = '/tags/' + encodeURIComponent(tag);
+                tagLink.classList.add('tag');
+                tagLink.textContent = tag;
+                postTagsContainer.appendChild(tagLink);
+            });
         }
 
-        // Function to display an error message
         function displayError(message) {
             var container = document.querySelector('.container');
             container.innerHTML = `<p style="color: red;">${sanitizeHTML(message)}</p>`;
         }
 
-        // Utility function to sanitize HTML to prevent XSS
         function sanitizeHTML(str) {
             var temp = document.createElement('div');
             temp.textContent = str;
             return temp.innerHTML;
         }
 
-        // Function to fetch and display comments
         function fetchComments(postId) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/blog/post/comments?post_id=' + encodeURIComponent(postId), true);
@@ -534,7 +573,6 @@
             xhr.send();
         }
 
-        // Function to display comments
         function displayComments(comments) {
             var commentsList = document.getElementById('commentsList');
             commentsList.innerHTML = ''; // Clear existing comments
@@ -555,34 +593,32 @@
             }
         }
 
-        // Function to show or hide the new comment form based on authentication
         function showNewCommentForm(isLoggedIn) {
             var newCommentForm = document.getElementById('newCommentForm');
             if (isLoggedIn) {
-                newCommentForm.style.display = 'block';
+                // Only show comment form if post is not closed
+                if (currentPost && currentPost.status === 'CLOSED') {
+                    newCommentForm.style.display = 'none';
+                } else {
+                    newCommentForm.style.display = 'block';
+                }
             } else {
                 newCommentForm.style.display = 'none';
             }
         }
 
-        // Function to display attributes (hide null, add cm/kg)
         function displayAttributes(attributes) {
             var postAttributesContainer = document.getElementById('postAttributes');
             var attributesTable = document.getElementById('attributesTable');
-            
-            // Clear any existing content
             attributesTable.innerHTML = '';
 
-            // Iterate over the attributes object and create table rows
             for (var key in attributes) {
                 if (attributes.hasOwnProperty(key)) {
                     let value = attributes[key];
                     if (value === null || value === undefined) {
-                        // Skip null or undefined attributes
                         continue;
                     }
 
-                    // Add units for certain attributes
                     if (key === 'length' || key === 'width' || key === 'depth') {
                         value = value + ' cm';
                     } else if (key === 'weight') {
@@ -603,7 +639,6 @@
                 }
             }
 
-            // If after processing, the table is still empty, don't show the section
             if (attributesTable.children.length > 0) {
                 postAttributesContainer.style.display = 'block';
             } else {
@@ -611,10 +646,8 @@
             }
         }
 
-        // Function to handle comment submission
         function handleCommentSubmission(event) {
-            event.preventDefault(); // Prevent default form submission
-
+            event.preventDefault();
             var postId = getQueryParam('post_id');
             if (!postId) {
                 alert("Invalid post ID.");
@@ -622,7 +655,6 @@
             }
 
             var content = document.getElementById('commentContent').value.trim();
-
             if (!content) {
                 alert("Please fill in the comment field.");
                 return;
@@ -635,9 +667,8 @@
                 if (xhr.status === 200) {
                     alert("Comment added successfully!");
                     document.getElementById('commentForm').reset();
-                    fetchComments(postId); // Refresh comments
+                    fetchComments(postId);
                 } else {
-                    // Attempt to parse error message from backend
                     try {
                         var response = JSON.parse(xhr.responseText);
                         alert("Failed to add comment: " + response.error);
@@ -655,12 +686,30 @@
             }));
         }
 
-        // Initialize
+        // Close Post function
+        function closePost(postId) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('PUT', '/blog/post/close', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert("Post closed successfully!");
+                    // Refresh post details to update UI
+                    fetchPostDetails();
+                } else {
+                    alert("Failed to close post: " + xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                alert("Request failed.");
+            };
+            xhr.send(JSON.stringify({ post_id: postId }));
+        }
+
         window.onload = function() {
             checkSession();
             fetchPostDetails();
 
-            // Attach event listener to comment form
             var commentForm = document.getElementById('commentForm');
             if (commentForm) {
                 commentForm.addEventListener('submit', handleCommentSubmission);

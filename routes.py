@@ -421,3 +421,26 @@ class BlogRoutes:
 
             results = [post.to_dict() for post in matched_posts]
             return jsonify(results), 200
+        
+        @self.app.route('/blog/post/close', methods=['PUT'])
+        def close_post():
+            if 'user_id' not in session:
+                return jsonify({"error": "You must be logged in to close a post"}), 401
+            
+            data = request.json
+            if not data or 'post_id' not in data:
+                return jsonify({"error": "Post ID is required"}), 400
+
+            # Find the post by ID
+            post = BlogPost.query.get(data['post_id'])
+            if not post:
+                return jsonify({"error": "Post not found"}), 404
+
+            # Check if the logged-in user is the post owner
+            if session.get('user_name') != post.author:
+                return jsonify({"error": "You do not have permission to close this post"}), 403
+
+            # Update the post's status to CLOSED
+            post.status = 'CLOSED'
+            db.session.commit()
+            return jsonify({"message": "Post closed successfully!"}), 200
