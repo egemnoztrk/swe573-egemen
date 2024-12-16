@@ -276,7 +276,7 @@
                             `;
                             // Optional: Make the post clickable to view details
                             postCard.onclick = function() {
-                                window.location.href = `/post.html?post_id=${encodeURIComponent(post.id)}`;
+                                window.location.href = `/post?post_id=${encodeURIComponent(post.id)}`;
                             };
                             postsGrid.appendChild(postCard);
                         });
