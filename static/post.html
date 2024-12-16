@@ -308,7 +308,7 @@
 
     <div class="container">
         <!-- Post details will be dynamically inserted here -->
-        <h1 id="postTitle">Loading...</h1>
+        <h1 id="postTitle" class="post-title">Loading...</h1>
         <p id="postMeta" class="post-meta"></p>
         <img id="postImage" class="post-image" src="" alt="Post Image" style="display: none;">
         <div id="postContent" class="post-content"></div>
@@ -319,13 +319,17 @@
         <!-- Attributes Section -->
         <div id="postAttributes" class="post-attributes" style="display: none;">
             <h4>Attributes</h4>
-            <table id="attributesTable"></table>
+            <table id="attributesTable">
+                <!-- Attributes will be dynamically inserted here -->
+            </table>
         </div>
         
         <!-- Comments Section -->
         <div id="commentsSection" class="comments-section">
             <h3>Comments</h3>
-            <div id="commentsList" class="comments-list"></div>
+            <div id="commentsList" class="comments-list">
+                <!-- Existing comments will be inserted here -->
+            </div>
             <div id="newCommentForm" class="new-comment-form" style="display: none;">
                 <h4>Add a Comment</h4>
                 <form id="commentForm">
@@ -375,11 +379,13 @@
             navLinks.innerHTML = ''; // Clear existing links
 
             if (isLoggedIn) {
+                // Create Profile link
                 var profileLink = document.createElement('a');
                 profileLink.href = '/profile';
                 profileLink.textContent = 'Profile';
                 navLinks.appendChild(profileLink);
 
+                // Create Logout button
                 var logoutButton = document.createElement('a');
                 logoutButton.href = '#';
                 logoutButton.textContent = 'Logout';
@@ -390,11 +396,13 @@
                 };
                 navLinks.appendChild(logoutButton);
             } else {
+                // Create Login link
                 var loginLink = document.createElement('a');
                 loginLink.href = '/login';
                 loginLink.textContent = 'Login';
                 navLinks.appendChild(loginLink);
 
+                // Create Register link
                 var registerLink = document.createElement('a');
                 registerLink.href = '/register';
                 registerLink.textContent = 'Register';
@@ -419,7 +427,7 @@
             xhr.onerror = function() {
                 alert("Request failed.");
             };
-            xhr.send(JSON.stringify({}));
+            xhr.send(JSON.stringify({})); // Send empty body or as required by your backend
         }
 
         // Function to get query parameter by name
@@ -458,10 +466,9 @@
             document.getElementById('postTitle').innerText = sanitizeHTML(post.title);
             document.getElementById('postMeta').innerText = `By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}`;
 
-            // Use the new photo_endpoint if available
-            if (post.photo_endpoint) {
+            if (post.photo_url) {
                 var postImage = document.getElementById('postImage');
-                postImage.src = post.photo_endpoint;
+                postImage.src = post.photo_url;
                 postImage.style.display = 'block';
             } else {
                 document.getElementById('postImage').style.display = 'none';
@@ -481,7 +488,7 @@
         // Function to display tags
         function displayTags(tags) {
             var postTagsContainer = document.getElementById('postTags');
-            postTagsContainer.innerHTML = '';
+            postTagsContainer.innerHTML = ''; // Clear existing tags
 
             if (tags && tags.length > 0) {
                 tags.forEach(function(tag) {
@@ -530,7 +537,7 @@
         // Function to display comments
         function displayComments(comments) {
             var commentsList = document.getElementById('commentsList');
-            commentsList.innerHTML = '';
+            commentsList.innerHTML = ''; // Clear existing comments
 
             if (comments.length > 0) {
                 comments.forEach(function(comment) {
@@ -558,15 +565,30 @@
             }
         }
 
-        // Function to display attributes
+        // Function to display attributes (hide null, add cm/kg)
         function displayAttributes(attributes) {
             var postAttributesContainer = document.getElementById('postAttributes');
             var attributesTable = document.getElementById('attributesTable');
             
+            // Clear any existing content
             attributesTable.innerHTML = '';
 
+            // Iterate over the attributes object and create table rows
             for (var key in attributes) {
                 if (attributes.hasOwnProperty(key)) {
+                    let value = attributes[key];
+                    if (value === null || value === undefined) {
+                        // Skip null or undefined attributes
+                        continue;
+                    }
+
+                    // Add units for certain attributes
+                    if (key === 'length' || key === 'width' || key === 'depth') {
+                        value = value + ' cm';
+                    } else if (key === 'weight') {
+                        value = value + ' kg';
+                    }
+
                     var row = document.createElement('tr');
 
                     var keyCell = document.createElement('th');
@@ -574,19 +596,24 @@
                     row.appendChild(keyCell);
 
                     var valueCell = document.createElement('td');
-                    valueCell.innerText = sanitizeHTML(String(attributes[key]));
+                    valueCell.innerText = sanitizeHTML(String(value));
                     row.appendChild(valueCell);
 
                     attributesTable.appendChild(row);
                 }
             }
 
-            postAttributesContainer.style.display = 'block';
+            // If after processing, the table is still empty, don't show the section
+            if (attributesTable.children.length > 0) {
+                postAttributesContainer.style.display = 'block';
+            } else {
+                postAttributesContainer.style.display = 'none';
+            }
         }
 
         // Function to handle comment submission
         function handleCommentSubmission(event) {
-            event.preventDefault();
+            event.preventDefault(); // Prevent default form submission
 
             var postId = getQueryParam('post_id');
             if (!postId) {
@@ -595,6 +622,7 @@
             }
 
             var content = document.getElementById('commentContent').value.trim();
+
             if (!content) {
                 alert("Please fill in the comment field.");
                 return;
@@ -607,8 +635,9 @@
                 if (xhr.status === 200) {
                     alert("Comment added successfully!");
                     document.getElementById('commentForm').reset();
-                    fetchComments(postId);
+                    fetchComments(postId); // Refresh comments
                 } else {
+                    // Attempt to parse error message from backend
                     try {
                         var response = JSON.parse(xhr.responseText);
                         alert("Failed to add comment: " + response.error);
@@ -626,9 +655,12 @@
             }));
         }
 
+        // Initialize
         window.onload = function() {
             checkSession();
             fetchPostDetails();
+
+            // Attach event listener to comment form
             var commentForm = document.getElementById('commentForm');
             if (commentForm) {
                 commentForm.addEventListener('submit', handleCommentSubmission);

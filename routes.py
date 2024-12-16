@@ -3,7 +3,7 @@ from datetime import datetime
 import json
 import traceback
 from bson import ObjectId
-from flask import Flask, request, jsonify, session, send_from_directory, make_response
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -176,26 +176,28 @@ class BlogRoutes:
 
             # Validate required fields
             if not data:
-                return jsonify("No data provided"), 400
+                return jsonify("No data provided")
+            
             if not data.get('title'):
-                return jsonify("Title is required"), 400
+                return jsonify("Title is required")
+            
             if not data.get('content'):
-                return jsonify("Content is required"), 400
+                return jsonify("Content is required")
+            
             if 'photo' not in files or files['photo'].filename == '':
-                return jsonify("Photo is required"), 400
+                return jsonify("Photo is required")
+            
             if not data.get('tags'):
                 return jsonify("Tags are required"), 400
 
-            # Handle image upload (now storing in DB)
-            photo_data = None
-            photo_mimetype = None
+            # Handle file uploads
+            photo_url = None
             if 'photo' in files and files['photo'].filename != '':
                 photo = files['photo']
                 if self.allowed_file(photo.filename):
-                    photo_data = photo.read()  # Read image content
-                    photo_mimetype = photo.mimetype  # Store mimetype
-                else:
-                    return jsonify({"error": "File type not allowed"}), 400
+                    filename = secure_filename(photo.filename) # type: ignore
+                    photo.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
+                    photo_url = f"/uploads/{filename}"
 
             file_url = None
             if 'file' in files and files['file'].filename != '':
@@ -216,30 +218,36 @@ class BlogRoutes:
                 except json.JSONDecodeError:
                     return jsonify({"error": "Invalid JSON format for attributes"}), 400
 
-            # Process tags
+            # Retrieve 'tags' from data, defaulting to an empty list if not present
             tags = data.get('tags', [])
+
+            # Ensure that 'tags' is a list. If it's a string (e.g., a JSON string), parse it.
             if isinstance(tags, str):
                 try:
                     tags = json.loads(tags)
                     if not isinstance(tags, list):
                         raise ValueError("Parsed tags is not a list.")
-                except (json.JSONDecodeError, ValueError):
+                except (json.JSONDecodeError, ValueError) as e:
+                    # Handle the error as needed, for example:
                     tags = [tag.strip() for tag in tags.split(",") if tag.strip()] # type: ignore
+
+            # Now, process the tags list: strip whitespace and filter out any empty strings
             tags_list = [tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()]
+
+            # Join the list into a comma-separated string, or set to None if the list is empty
             tags_str = ",".join(tags_list) if tags_list else None
 
-            # Create a new blog post instance with photo stored in DB
+            # Create a new blog post instance
             post = BlogPost(
                 title=data['title'],
                 content=data['content'],
                 author=session.get('user_name', 'Anonymous'),
-                is_published=bool(int(data.get('is_published', 0))),
+                is_published=bool(int(data.get('is_published', 0))),  # Convert to bool
+                photo_url=photo_url,
                 file_url=file_url,
                 tags=tags_str,
                 status=data.get('status', "NEW"),
-                attributes=attributes,
-                photo=photo_data,
-                photo_mimetype=photo_mimetype
+                attributes=attributes  # Pass the attributes dictionary
             )
 
             try:
@@ -251,15 +259,6 @@ class BlogRoutes:
 
             return jsonify({"message": "Post created successfully!", "post_id": post.id}), 201
 
-        @self.app.route('/blog/posts/<int:post_id>/photo', methods=['GET'])
-        def get_post_photo(post_id):
-            post = BlogPost.query.get(post_id)
-            if not post or not post.photo:
-                return jsonify({"error": "Photo not found"}), 404
-            response = make_response(post.photo)
-            response.headers.set('Content-Type', post.photo_mimetype or 'image/jpeg')
-            return response
-
         @self.app.route('/blog/post/status', methods=['PUT'])
         def update_status():
             data = request.json
@@ -268,10 +267,12 @@ class BlogRoutes:
             if 'status' not in data or data['status'] not in ['NEW', 'CLOSED']:
                 return jsonify({"error": "Invalid or missing status"}), 400
 
+            # Find the post by ID
             post = BlogPost.query.get(data['post_id'])
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
+            # Update the post's status
             post.status = data['status']
             db.session.commit()
             return jsonify({"message": "Post status updated successfully!"})
@@ -282,10 +283,13 @@ class BlogRoutes:
             if not data or not data.get('post_id') or not data.get('comment'):
                 return jsonify({"error": "Post ID and Comment text are required"}), 400
 
+            # Find the post by ID
             post = BlogPost.query.get(data['post_id'])
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
+            print(f"New comment for post: {post.id}, Comment: {data['comment']}, Author: {session.get('user_name', 'Anonymous')}")
+            # Create a new comment instance
             comment = Comment(
                 blog_post_id=post.id,
                 author=session.get('user_name', 'Anonymous'),
@@ -303,21 +307,23 @@ class BlogRoutes:
             if not post_id:
                 return jsonify({"error": "Post ID is required"}), 400
 
+            # Find the post by ID
             post = BlogPost.query.get(post_id)
             if not post:
                 return jsonify({"error": "Post not found"}), 404
 
             comments = Comment.query.filter_by(blog_post_id=post.id).all()
             result = [comment.to_dict() for comment in comments]
-            result.reverse()
+            result.reverse()  # Reverse the order of comments
             return jsonify(result)
-
+        
         @self.app.route('/blog/post', methods=['GET'])
         def get_post():
             post_id = request.args.get('post_id')
             if not post_id:
                 return jsonify({"error": "Post ID is required"}), 400
 
+            # Find the post by ID
             post = BlogPost.query.get(post_id)
             if not post:
                 return jsonify({"error": "Post not found"}), 404
@@ -327,7 +333,7 @@ class BlogRoutes:
         @self.app.route('/blog/posts', methods=['GET'])
         def get_posts():
             DEFAULT_LIMIT = 6
-            MAX_LIMIT = 10
+            MAX_LIMIT = 10  # Optional: to prevent excessive data retrieval
 
             try:
                 limit = request.args.get('limit', default=DEFAULT_LIMIT, type=int)
@@ -340,9 +346,11 @@ class BlogRoutes:
 
             try:
                 posts = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(limit).all()                
+                posts = list(posts)
                 result = [post.to_dict() for post in posts]
                 return jsonify(result), 200
             except Exception as e:
+                # Log the exception as needed
                 return jsonify({"error": "An error occurred while fetching posts."}), 500
 
         @self.app.route('/blog/posts/user', methods=['GET'])
@@ -371,11 +379,13 @@ class BlogRoutes:
             except ValueError as ve:
                 return jsonify({"error": str(ve)}), 400
 
-            # Perform a case-insensitive search in title or content
-            # You can add more fields as needed.
+            # Add tags, author, and attributes to the search criteria
             matched_posts = BlogPost.query.filter(
                 (BlogPost.title.ilike(f"%{query}%")) | # type: ignore
-                (BlogPost.content.ilike(f"%{query}%")) # type: ignore
+                (BlogPost.content.ilike(f"%{query}%")) | # type: ignore
+                (BlogPost.tags.ilike(f"%{query}%")) | # type: ignore
+                (BlogPost.author.ilike(f"%{query}%")) | # type: ignore
+                (BlogPost.attributes.ilike(f"%{query}%"))  # Ensure attributes is stored in a searchable text/JSON field # type: ignore
             ).order_by(BlogPost.created_at.desc()).limit(limit).all()
 
             results = [post.to_dict() for post in matched_posts]

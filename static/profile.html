@@ -118,7 +118,6 @@
             max-width: 350px;
             overflow: hidden;
             transition: transform 0.3s ease;
-            cursor: pointer;
         }
 
         .post-card:hover {
@@ -192,7 +191,6 @@
             <label for="role">Role:</label>
             <p id="role">Loading...</p>
         </div>
-        <button class="edit-button" onclick="window.location.href='/edit-profile'">Edit Profile</button>
         <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
         <div class="error-message" id="errorMessage"></div>
 
@@ -200,7 +198,9 @@
         <div class="posts-section">
             <h3>Your Posts</h3>
             <div id="postsLoading" class="loading-placeholder">Loading your posts...</div>
-            <div id="postsGrid" class="posts-grid"></div>
+            <div id="postsGrid" class="posts-grid">
+                <!-- User posts will be dynamically inserted here -->
+            </div>
             <div id="noPostsMessage" class="no-posts" style="display: none;">You have not created any posts yet.</div>
         </div>
     </div>
@@ -264,18 +264,17 @@
                     if (posts.length > 0) {
                         postsGrid.innerHTML = ''; // Clear any existing posts
                         posts.forEach(post => {
-                            const imageSrc = post.photo_endpoint ? post.photo_endpoint : 'https://via.placeholder.com/350x200?text=No+Image';
-
                             const postCard = document.createElement('div');
                             postCard.classList.add('post-card');
                             postCard.innerHTML = `
-                                <img src="${sanitizeURL(imageSrc)}" alt="Post Image">
+                                <img src="${post.photo_url || 'https://via.placeholder.com/350x200?text=No+Image'}" alt="Post Image">
                                 <div class="post-content">
                                     <h4>${sanitizeHTML(post.title)}</h4>
                                     <p>${sanitizeHTML(truncateText(post.content, 100))}</p>
                                     <div class="post-meta">Posted on ${new Date(post.created_at).toLocaleDateString()}</div>
                                 </div>
                             `;
+                            // Optional: Make the post clickable to view details
                             postCard.onclick = function() {
                                 window.location.href = `/blog/post?post_id=${encodeURIComponent(post.id)}`;
                             };
@@ -303,7 +302,7 @@
         // Utility function to sanitize URLs
         function sanitizeURL(url) {
             try {
-                const sanitized = new URL(url, window.location.origin);
+                const sanitized = new URL(url);
                 return sanitized.href;
             } catch (e) {
                 return '';
