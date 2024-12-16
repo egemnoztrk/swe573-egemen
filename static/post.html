@@ -536,9 +536,11 @@
 
             tags.forEach(function(tag) {
                 var tagLink = document.createElement('a');
-                tagLink.href = '/tags/' + encodeURIComponent(tag);
+                // Redirect to Wikidata search page for the tag
+                tagLink.href = 'https://www.wikidata.org/wiki/Special:Search?search=' + encodeURIComponent(tag);
                 tagLink.classList.add('tag');
                 tagLink.textContent = tag;
+                tagLink.target = '_blank'; // Optional: opens in a new tab
                 postTagsContainer.appendChild(tagLink);
             });
         }
