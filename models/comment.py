@@ -20,5 +20,5 @@ class Comment(db.Model):
         return {
             "author": self.author,
             "comment": self.comment,
-            "created_at": self.created_at
+            "created_at": self.created_at,
         }

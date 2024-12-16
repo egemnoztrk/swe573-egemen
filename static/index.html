@@ -6,7 +6,7 @@
     <title>Mystique Matters</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Styles remain the same */
+        /* Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -167,6 +167,8 @@
 
         .blog-post img {
             width: 100%;
+            height: 200px; /* Set a fixed height as desired */
+            object-fit: cover; /* Ensures the image covers the container without stretching */
             border-radius: 8px 8px 0 0;
         }
 
@@ -283,7 +285,7 @@
             }
         }
 
-        /* Tags Styling */ /* Added CSS for tags */
+        /* Tags Styling */
         .tags {
             margin-top: 10px;
         }
@@ -303,6 +305,48 @@
         .tag:hover {
             background-color: #007bff;
             color: white;
+        }
+
+        /* Additional styles for the new attribute fields */
+        fieldset {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        fieldset legend {
+            padding: 0 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* Container for the tags input and suggestions */
+        .tags-input-container {
+            position: relative;
+        }
+
+        /* Suggestions Dropdown */
+        .tags-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ccc;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none; /* Hidden by default */
+        }
+
+        .tags-suggestions div {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .tags-suggestions div:hover {
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -325,40 +369,85 @@
 
     <!-- Blog Section -->
     <div class="blog-section container">
-        <h2>Latest Blog Posts</h2>
+        <h2>Posts</h2>
+        
+        <!-- Search Bar -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <form id="searchForm" style="display: inline-block;">
+                <input type="text" id="searchQuery" name="query" placeholder="Search posts..." 
+                       style="padding: 10px; width: 200px; border-radius: 4px; border: 1px solid #ccc;">
+                <button type="submit" style="padding: 10px 20px; border: none; border-radius: 4px;
+                        background-color: #007bff; color: white; cursor: pointer;">
+                    Search
+                </button>
+            </form>
+        </div>
         
         <!-- Loading Placeholder -->
-        <div id="loadingPlaceholder" class="loading-placeholder">Loading blog posts...</div>
+        <div id="loadingPlaceholder" class="loading-placeholder">Loading posts...</div>
 
         <div class="blog-grid" id="postList">
             <!-- Blog posts will be dynamically inserted here -->
         </div>
 
-        <!-- New Post Form -->
-        <div class="new-post-form" id="newPostForm" style="display: none;">
-            <h3>Create a New Post</h3>
-            <form id="postForm" enctype="multipart/form-data">
-                <label for="postTitle">Title</label>
-                <input type="text" id="postTitle" name="title" required>
+    <!-- New Post Form -->
+    <div class="new-post-form" id="newPostForm" style="display: none;">
+        <h3>Create a New Post</h3>
+        <form id="postForm" enctype="multipart/form-data">
+            <!-- Existing Fields -->
+            <label for="postTitle">Title</label>
+            <input type="text" id="postTitle" name="title" required>
 
-                <label for="postContent">Content</label>
-                <textarea id="postContent" name="content" rows="5" required></textarea>
+            <label for="postContent">Content</label>
+            <textarea id="postContent" name="content" rows="5" required></textarea>
 
-                <label for="postTags">Tags <small>(separated by commas)</small></label>
-                <input type="text" id="postTags" name="tags" placeholder="e.g., mystery, science, history">
+            <!-- Tags Input Field and Suggestions -->
+            <label for="postTags">Tags <small>(separated by commas)</small></label>
+            <div class="tags-input-container">
+                <input type="text" id="postTags" name="tags" placeholder="e.g., mystery, science, history" required>
+                <div id="tagsSuggestions" class="tags-suggestions"></div>
+            </div>
 
-                <label for="postAuthor">Author</label>
-                <input type="text" id="postAuthor" name="author" readonly>
+            <input type="hidden" id="postAuthor" name="author" readonly>
 
-                <label for="postPhoto">Photo</label>
-                <input type="file" id="postPhoto" name="photo" accept="image/*">
+            <label for="postPhoto">Photo</label>
+            <input type="file" id="postPhoto" name="photo" accept="image/*" required>
 
-                <label for="postFile">Additional File</label>
-                <input type="file" id="postFile" name="file">
+            <!-- Toggle Button for Additional Attributes -->
+            <button type="button" id="toggleAttributesButton">Add Additional Attributes</button>
 
-                <button type="button" onclick="submitPost()">Submit Post</button>
-            </form>
-        </div>
+            <!-- Additional Attributes Div -->
+            <div id="additionalAttributes" style="display: none;">
+                <h4>Additional Attributes</h4>
+
+                <label for="postColor">Color</label>
+                <input type="text" id="postColor" name="color" placeholder="e.g., Red">
+
+                <label for="postShape">Shape</label>
+                <input type="text" id="postShape" name="shape" placeholder="e.g., Circular">
+
+                <label for="postMaterial">Material</label>
+                <input type="text" id="postMaterial" name="material" placeholder="e.g., Metal">
+
+                <fieldset>
+                    <legend>Size</legend>
+                    <label for="postLength">Length (CM)</label>
+                    <input type="number" id="postLength" name="length" placeholder="e.g., 10" min="0" step="any">
+
+                    <label for="postWidth">Width (CM)</label>
+                    <input type="number" id="postWidth" name="width" placeholder="e.g., 5" min="0" step="any">
+
+                    <label for="postDepth">Depth (CM)</label>
+                    <input type="number" id="postDepth" name="depth" placeholder="e.g., 3" min="0" step="any">
+                </fieldset>
+
+                <label for="postWeight">Weight (KG)</label>
+                <input type="number" id="postWeight" name="weight" placeholder="e.g., 2.5" min="0" step="any">
+            </div>
+
+            <button type="button" onclick="submitPost()">Submit Post</button>
+        </form>
+    </div>
     </div>
 
     <!-- Footer -->
@@ -396,7 +485,6 @@
         function showNewPostForm(isLoggedIn) {
             var newPostForm = document.getElementById('newPostForm');
             if (isLoggedIn) {
-                // Assuming the user’s name is retrieved from the session endpoint or another way
                 document.getElementById('postAuthor').value = userName;
                 newPostForm.style.display = 'block';
             } else {
@@ -458,7 +546,7 @@
             xhr.onerror = function() {
                 alert("Request failed.");
             };
-            xhr.send(JSON.stringify({})); // Send empty body or as required by your backend
+            xhr.send(JSON.stringify({}));
         }
 
         // Fetch the latest blog posts
@@ -482,15 +570,20 @@
                         posts.forEach(function (post) {
                             var postItem = document.createElement('div');
                             postItem.classList.add('blog-post');
+                            var tagsHtml = '';
+                            if (post.tags && post.tags.length > 0) {
+                                var tagsArray = typeof post.tags === 'string' ? post.tags.split(',') : post.tags;
+                                tagsHtml = tagsArray.map(tag => 
+                                    `<a href="/tags/${encodeURIComponent(tag)}" class="tag">${sanitizeHTML(tag)}</a>`
+                                ).join(' ');
+                            }
                             postItem.innerHTML = `
                                 <img src="${post.photo_url || 'https://via.placeholder.com/300x200'}" alt="Post Image">
                                 <div class="content">
                                     <h3>${sanitizeHTML(post.title)}</h3>
                                     <p>${sanitizeHTML(post.content.substring(0, 150))}...</p>
                                     <p class="author">By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}</p>
-                                    <div class="tags">
-                                        ${post.tags && post.tags.length > 0 ? post.tags.map(tag => `<a href="/tags/${encodeURIComponent(tag)}" class="tag">${sanitizeHTML(tag)}</a>`).join(' ') : ''}
-                                    </div>
+                                    <div class="tags">${tagsHtml}</div>
                                     <a href="post?post_id=${encodeURIComponent(post.id)}">Read More</a>
                                 </div>
                             `;
@@ -518,19 +611,32 @@
             var formData = new FormData(form);
 
             // Get the tags from the input and format them
-            var tagsInput = document.getElementById('postTags').value;
-            var tagsArray = tagsInput.split(',').map(function(tag) {
+            var tagsInputValue = document.getElementById('postTags').value;
+            var tagsArray = tagsInputValue.split(',').map(function(tag) {
                 return tag.trim();
             }).filter(function(tag) {
                 return tag.length > 0;
             });
 
-            // Append tags as JSON string or as per backend requirement
-            formData.append('tags', JSON.stringify(tagsArray));
+            // Append tags as JSON string
+            formData.set('tags', JSON.stringify(tagsArray));
+
+            // Collect additional attributes
+            var attributes = {
+                color: document.getElementById('postColor').value.trim() || null,
+                shape: document.getElementById('postShape').value.trim() || null,
+                material: document.getElementById('postMaterial').value.trim() || null,
+                length: document.getElementById('postLength').value ? parseFloat(document.getElementById('postLength').value) : null,
+                width: document.getElementById('postWidth').value ? parseFloat(document.getElementById('postWidth').value) : null,
+                depth: document.getElementById('postDepth').value ? parseFloat(document.getElementById('postDepth').value) : null,
+                weight: document.getElementById('postWeight').value ? parseFloat(document.getElementById('postWeight').value) : null
+            };
+
+            // Append attributes as JSON string
+            formData.append('attributes', JSON.stringify(attributes));
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/blog/posts', true);
-            // Note: When sending FormData, do not set the Content-Type header manually
             xhr.onload = function() {
                 if (xhr.status === 201) {
                     alert("Post created successfully!");
@@ -558,6 +664,173 @@
             checkSession();
             fetchLatestPosts();
         };
+
+        document.getElementById('toggleAttributesButton').addEventListener('click', function() {
+            var additionalAttributes = document.getElementById('additionalAttributes');
+            if (additionalAttributes.style.display === 'none') {
+                additionalAttributes.style.display = 'block';
+                this.textContent = 'Hide Additional Attributes';
+            } else {
+                additionalAttributes.style.display = 'none';
+                this.textContent = 'Add Additional Attributes';
+            }
+        });
+
+        // Get the tags input field and suggestions container
+        var tagsInput = document.getElementById('postTags');
+        var tagsSuggestions = document.getElementById('tagsSuggestions');
+
+        // Debounce function to limit API calls
+        function debounce(func, delay) {
+            var debounceTimer;
+            return function() {
+                var context = this;
+                var args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    func.apply(context, args);
+                }, delay);
+            }
+        }
+
+        // Event listener for input changes in the tags field
+        tagsInput.addEventListener('input', debounce(function(e) {
+            var inputValue = tagsInput.value;
+            var tagsArray = inputValue.split(',');
+            var currentTag = tagsArray[tagsArray.length - 1].trim();
+            if (currentTag.length >= 2) {
+                searchWikidata(currentTag);
+            } else {
+                tagsSuggestions.style.display = 'none';
+            }
+        }, 300));
+
+        // Function to search Wikidata for tag suggestions
+        function searchWikidata(query) {
+            var xhr = new XMLHttpRequest();
+            var url = 'https://www.wikidata.org/w/api.php?action=wbsearchentities&search=' + encodeURIComponent(query) + '&language=en&format=json&origin=*';
+            xhr.open('GET', url, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    displayTagSuggestions(response.search);
+                } else {
+                    console.error('Wikidata API request failed:', xhr.statusText);
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Wikidata API request failed.');
+            };
+            xhr.send();
+        }
+
+        // Function to display tag suggestions in the dropdown
+        function displayTagSuggestions(suggestions) {
+            // Clear previous suggestions
+            tagsSuggestions.innerHTML = '';
+            if (suggestions.length === 0) {
+                tagsSuggestions.style.display = 'none';
+                return;
+            }
+            // Limit the number of suggestions
+            var maxSuggestions = 100;
+            for (var i = 0; i < Math.min(suggestions.length, maxSuggestions); i++) {
+                var suggestion = suggestions[i];
+                var suggestionDiv = document.createElement('div');
+                suggestionDiv.textContent = suggestion.label;
+                suggestionDiv.dataset.label = suggestion.label;
+                suggestionDiv.addEventListener('click', function(e) {
+                    selectTagSuggestion(e.target.dataset.label);
+                });
+                tagsSuggestions.appendChild(suggestionDiv);
+            }
+            // Show the suggestions dropdown
+            tagsSuggestions.style.display = 'block';
+        }
+
+        // Function to handle selection of a tag suggestion
+        function selectTagSuggestion(label) {
+            var inputValue = tagsInput.value;
+            var tagsArray = inputValue.split(',');
+            // Replace the last tag with the selected suggestion
+            tagsArray[tagsArray.length - 1] = ' ' + label;
+            tagsInput.value = tagsArray.join(',').trim() + ', '; 
+            tagsSuggestions.style.display = 'none';
+            tagsInput.focus();
+        }
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== tagsInput && e.target.parentNode !== tagsSuggestions) {
+                tagsSuggestions.style.display = 'none';
+            }
+        });
+
+        // Handle search form submission
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent the default form submission
+            var query = document.getElementById('searchQuery').value.trim();
+            if (query) {
+                searchPosts(query);
+            } else {
+                // If no query is provided, fetch the latest posts again
+                fetchLatestPosts();
+            }
+        });
+
+        function searchPosts(query) {
+            var loadingPlaceholder = document.getElementById('loadingPlaceholder');
+            var postList = document.getElementById('postList');
+            loadingPlaceholder.style.display = 'block';
+            postList.style.display = 'none';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/blog/search?query=' + encodeURIComponent(query), true);
+            xhr.onload = function() {
+                loadingPlaceholder.style.display = 'none';
+                postList.style.display = 'flex';
+
+                if (xhr.status === 200) {
+                    var posts = JSON.parse(xhr.responseText);
+                    postList.innerHTML = ''; 
+                    if (posts.length > 0) {
+                        posts.forEach(function (post) {
+                            var postItem = document.createElement('div');
+                            postItem.classList.add('blog-post');
+                            var tagsHtml = '';
+                            if (post.tags && post.tags.length > 0) {
+                                var tagsArray = typeof post.tags === 'string' ? post.tags.split(',') : post.tags;
+                                tagsHtml = tagsArray.map(tag => 
+                                    `<a href="/tags/${encodeURIComponent(tag)}" class="tag">${sanitizeHTML(tag)}</a>`
+                                ).join(' ');
+                            }
+                            postItem.innerHTML = `
+                                <img src="${post.photo_url || 'https://via.placeholder.com/300x200'}" alt="Post Image">
+                                <div class="content">
+                                    <h3>${sanitizeHTML(post.title)}</h3>
+                                    <p>${sanitizeHTML(post.content.substring(0, 150))}...</p>
+                                    <p class="author">By ${sanitizeHTML(post.author)} on ${new Date(post.created_at).toLocaleDateString()}</p>
+                                    <div class="tags">${tagsHtml}</div>
+                                    <a href="post?post_id=${encodeURIComponent(post.id)}">Read More</a>
+                                </div>
+                            `;
+                            postList.appendChild(postItem);
+                        });
+                    } else {
+                        postList.innerHTML = '<p class="no-posts">No posts found for the given query.</p>';
+                    }
+                } else {
+                    console.error('Failed to fetch search results:', xhr.statusText);
+                    postList.innerHTML = '<p class="no-posts">Failed to load search results.</p>';
+                }
+            };
+            xhr.onerror = function() {
+                loadingPlaceholder.style.display = 'none';
+                postList.style.display = 'flex';
+                postList.innerHTML = '<p class="no-posts">Failed to load search results.</p>';
+            };
+            xhr.send();
+        }
     </script>
 
 </body>

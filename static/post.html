@@ -6,7 +6,7 @@
     <title>Blog Post - Mystique Matters</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Similar styles as in your main page */
+        /* Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -27,6 +27,7 @@
             border-radius: 8px;
         }
 
+        /* Post Title and Meta */
         .post-title {
             font-size: 32px;
             margin-bottom: 10px;
@@ -39,12 +40,14 @@
             margin-bottom: 20px;
         }
 
+        /* Post Image */
         .post-image {
             width: 100%;
             border-radius: 8px;
             margin-bottom: 20px;
         }
 
+        /* Post Content */
         .post-content {
             font-size: 18px;
             line-height: 1.6;
@@ -71,6 +74,35 @@
         .post-tags .tag:hover {
             background-color: #007bff;
             color: white;
+        }
+
+        /* Attributes Section Styling */
+        .post-attributes {
+            margin-top: 20px;
+        }
+
+        .post-attributes h4 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .post-attributes table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .post-attributes th,
+        .post-attributes td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .post-attributes th {
+            background-color: #f4f7fa;
+            color: #333;
+            width: 30%;
         }
 
         /* Comments Section Styling */
@@ -133,7 +165,6 @@
             font-size: 14px;
         }
 
-        .new-comment-form input,
         .new-comment-form textarea {
             width: 100%;
             padding: 8px;
@@ -241,6 +272,16 @@
                 padding: 4px 8px;
             }
 
+            .post-attributes h4 {
+                font-size: 18px;
+            }
+
+            .post-attributes table,
+            .post-attributes th,
+            .post-attributes td {
+                font-size: 14px;
+            }
+
             .comments-section h3 {
                 font-size: 20px;
             }
@@ -267,13 +308,21 @@
 
     <div class="container">
         <!-- Post details will be dynamically inserted here -->
-        <h1 id="postTitle">Loading...</h1>
+        <h1 id="postTitle" class="post-title">Loading...</h1>
         <p id="postMeta" class="post-meta"></p>
         <img id="postImage" class="post-image" src="" alt="Post Image" style="display: none;">
         <div id="postContent" class="post-content"></div>
         
         <!-- Tags Section -->
         <div id="postTags" class="post-tags"></div>
+
+        <!-- Attributes Section -->
+        <div id="postAttributes" class="post-attributes" style="display: none;">
+            <h4>Attributes</h4>
+            <table id="attributesTable">
+                <!-- Attributes will be dynamically inserted here -->
+            </table>
+        </div>
         
         <!-- Comments Section -->
         <div id="commentsSection" class="comments-section">
@@ -284,9 +333,6 @@
             <div id="newCommentForm" class="new-comment-form" style="display: none;">
                 <h4>Add a Comment</h4>
                 <form id="commentForm">
-                    <label for="commentAuthor">Name</label>
-                    <input type="text" id="commentAuthor" name="author" required>
-                    
                     <label for="commentContent">Comment</label>
                     <textarea id="commentContent" name="content" rows="4" required></textarea>
                     
@@ -424,12 +470,19 @@
                 var postImage = document.getElementById('postImage');
                 postImage.src = post.photo_url;
                 postImage.style.display = 'block';
+            } else {
+                document.getElementById('postImage').style.display = 'none';
             }
 
             document.getElementById('postContent').innerHTML = sanitizeHTML(post.content).replace(/\n/g, '<br>');
 
             // Display tags
             displayTags(post.tags);
+
+            // Display attributes
+            if (post.attributes && Object.keys(post.attributes).length > 0) {
+                displayAttributes(post.attributes);
+            }
         }
 
         // Function to display tags
@@ -492,8 +545,8 @@
                     commentDiv.classList.add('comment');
                     commentDiv.innerHTML = `
                         <span class="comment-author">${sanitizeHTML(comment.author)}</span>
-                        <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
-                        <div class="comment-content">${sanitizeHTML(comment.content).replace(/\n/g, '<br>')}</div>
+                        <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span>
+                        <div class="comment-content">${sanitizeHTML(comment.comment)}</div>
                     `;
                     commentsList.appendChild(commentDiv);
                 });
@@ -507,10 +560,54 @@
             var newCommentForm = document.getElementById('newCommentForm');
             if (isLoggedIn) {
                 newCommentForm.style.display = 'block';
-                // Optionally, pre-fill the author name if available
-                document.getElementById('commentAuthor').value = userName;
             } else {
                 newCommentForm.style.display = 'none';
+            }
+        }
+
+        // Function to display attributes (hide null, add cm/kg)
+        function displayAttributes(attributes) {
+            var postAttributesContainer = document.getElementById('postAttributes');
+            var attributesTable = document.getElementById('attributesTable');
+            
+            // Clear any existing content
+            attributesTable.innerHTML = '';
+
+            // Iterate over the attributes object and create table rows
+            for (var key in attributes) {
+                if (attributes.hasOwnProperty(key)) {
+                    let value = attributes[key];
+                    if (value === null || value === undefined) {
+                        // Skip null or undefined attributes
+                        continue;
+                    }
+
+                    // Add units for certain attributes
+                    if (key === 'length' || key === 'width' || key === 'depth') {
+                        value = value + ' cm';
+                    } else if (key === 'weight') {
+                        value = value + ' kg';
+                    }
+
+                    var row = document.createElement('tr');
+
+                    var keyCell = document.createElement('th');
+                    keyCell.innerText = sanitizeHTML(key);
+                    row.appendChild(keyCell);
+
+                    var valueCell = document.createElement('td');
+                    valueCell.innerText = sanitizeHTML(String(value));
+                    row.appendChild(valueCell);
+
+                    attributesTable.appendChild(row);
+                }
+            }
+
+            // If after processing, the table is still empty, don't show the section
+            if (attributesTable.children.length > 0) {
+                postAttributesContainer.style.display = 'block';
+            } else {
+                postAttributesContainer.style.display = 'none';
             }
         }
 
@@ -524,11 +621,10 @@
                 return;
             }
 
-            var author = document.getElementById('commentAuthor').value.trim();
             var content = document.getElementById('commentContent').value.trim();
 
-            if (!author || !content) {
-                alert("Please fill in all fields.");
+            if (!content) {
+                alert("Please fill in the comment field.");
                 return;
             }
 
@@ -536,12 +632,18 @@
             xhr.open('POST', '/blog/post/comments', true);
             xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             xhr.onload = function() {
-                if (xhr.status === 201) {
+                if (xhr.status === 200) {
                     alert("Comment added successfully!");
                     document.getElementById('commentForm').reset();
                     fetchComments(postId); // Refresh comments
                 } else {
-                    alert("Failed to add comment: " + xhr.responseText);
+                    // Attempt to parse error message from backend
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        alert("Failed to add comment: " + response.error);
+                    } catch (e) {
+                        alert("Failed to add comment: " + xhr.responseText);
+                    }
                 }
             };
             xhr.onerror = function() {
@@ -549,8 +651,7 @@
             };
             xhr.send(JSON.stringify({
                 post_id: postId,
-                author: author,
-                content: content
+                comment: content
             }));
         }
 
