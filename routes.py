@@ -3,32 +3,44 @@ from datetime import datetime
 import json
 import traceback
 from bson import ObjectId
-from flask import Flask, request, jsonify, session, send_from_directory
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 from werkzeug.utils import secure_filename
+from io import BytesIO
 
 from models.blog_post import BlogPost
 from models.user import User
 from models.comment import Comment
 from models.db import db
 
-# Configure upload folder and allowed file extensions
+import boto3
+from botocore.exceptions import ClientError
+
+# Configure allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'txt', 'doc', 'docx'}
 
+load_dotenv()
+
+# S3 configuration
+S3_BUCKET = "swe573"
+s3_client = boto3.client('s3', region_name="ap-northeast-1")
 
 class FlaskApp:
     def __init__(self, secret_key: str, mysql_uri: str):
         self.app = Flask(__name__, static_folder='static')
         self.app.config["SESSION_PERMANENT"] = True
-        self.app.config["SESSION_TYPE"]      = "filesystem"
+        self.app.config["SESSION_TYPE"] = "filesystem"
         self.app.config['SQLALCHEMY_DATABASE_URI'] = mysql_uri
         self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         self.app.secret_key = secret_key
-        self.app.config['UPLOAD_FOLDER'] = './uploads'
+        # We no longer rely on local UPLOAD_FOLDER for permanent storage,
+        # but let's keep it as it was defined (unused now).
+        self.app.config['UPLOAD_FOLDER'] = './uploads'  
         db.init_app(self.app)
         with self.app.app_context():
             db.create_all()
@@ -41,29 +53,42 @@ class FlaskApp:
         # Serve index.html on the root route
         @self.app.route('/')
         def serve_index():
-            return send_from_directory(self.app.static_folder, 'index.html') # type: ignore
-        
+            return self.app.send_static_file('index.html')
+
         @self.app.route('/login')
         def serve_login():
-            return send_from_directory(self.app.static_folder, 'login.html') # type: ignore
-        
+            return self.app.send_static_file('login.html')
+
         @self.app.route('/register')
         def serve_register():
-            return send_from_directory(self.app.static_folder, 'register.html') # type: ignore
-        
+            return self.app.send_static_file('register.html')
+
         @self.app.route('/profile')
         def serve_profile():
-            return send_from_directory(self.app.static_folder, 'profile.html') # type: ignore
-        
+            return self.app.send_static_file('profile.html')
+
         @self.app.route('/post')
         def serve_post():
-            return send_from_directory(self.app.static_folder, 'post.html') # type: ignore
-                
-        # New route to serve uploaded files
+            return self.app.send_static_file('post.html')
+
+        # Updated route to serve files from S3
         @self.app.route('/uploads/<filename>')
         def uploaded_file(filename):
-            # Serve the file from the configured upload folder
-            return send_from_directory(self.app.config['UPLOAD_FOLDER'], filename)
+            # Retrieve the file from S3 and send it
+            try:
+                obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
+                file_data = obj['Body'].read()
+                content_type = obj['ContentType'] if 'ContentType' in obj else 'application/octet-stream'
+                # Use an in-memory BytesIO to serve the file
+                return send_file(
+                    BytesIO(file_data),
+                    mimetype=content_type,
+                    download_name=filename,
+                    as_attachment=False
+                )
+            except ClientError as e:
+                # If the file doesn't exist or another error occurs, return a 404
+                return jsonify({"error": "File not found"}), 404
 
     def run(self):
         try:
@@ -190,22 +215,31 @@ class BlogRoutes:
             if not data.get('tags'):
                 return jsonify("Tags are required"), 400
 
-            # Handle file uploads
             photo_url = None
             if 'photo' in files and files['photo'].filename != '':
                 photo = files['photo']
                 if self.allowed_file(photo.filename):
                     filename = secure_filename(photo.filename) # type: ignore
-                    photo.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
-                    photo_url = f"/uploads/{filename}"
+                    # Upload to S3
+                    try:
+                        s3_client.upload_fileobj(photo, S3_BUCKET, filename, ExtraArgs={'ContentType': photo.content_type})
+                        photo_url = f"/uploads/{filename}"
+                    except ClientError as e:
+                        print(f"Error uploading photo to S3: {e}")
+                        return jsonify({"error": "Failed to upload photo"}), 500
 
             file_url = None
             if 'file' in files and files['file'].filename != '':
                 file = files['file']
                 if self.allowed_file(file.filename):
                     filename = secure_filename(file.filename) # type: ignore
-                    file.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
-                    file_url = f"/uploads/{filename}"
+                    # Upload to S3
+                    try:
+                        s3_client.upload_fileobj(file, S3_BUCKET, filename, ExtraArgs={'ContentType': file.content_type})
+                        file_url = f"/uploads/{filename}"
+                    except ClientError as e:
+                        print(f"Error uploading file to S3: {e}")
+                        return jsonify({"error": "Failed to upload file"}), 500
 
             # Handle attributes
             attributes = {}
@@ -228,13 +262,10 @@ class BlogRoutes:
                     if not isinstance(tags, list):
                         raise ValueError("Parsed tags is not a list.")
                 except (json.JSONDecodeError, ValueError) as e:
-                    # Handle the error as needed, for example:
                     tags = [tag.strip() for tag in tags.split(",") if tag.strip()] # type: ignore
 
-            # Now, process the tags list: strip whitespace and filter out any empty strings
+            # Process the tags list
             tags_list = [tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()]
-
-            # Join the list into a comma-separated string, or set to None if the list is empty
             tags_str = ",".join(tags_list) if tags_list else None
 
             # Create a new blog post instance
@@ -345,7 +376,7 @@ class BlogRoutes:
                 return jsonify({"error": str(ve)}), 400
 
             try:
-                posts = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(limit).all()                
+                posts = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(limit).all()
                 posts = list(posts)
                 result = [post.to_dict() for post in posts]
                 return jsonify(result), 200
@@ -379,13 +410,13 @@ class BlogRoutes:
             except ValueError as ve:
                 return jsonify({"error": str(ve)}), 400
 
-            # Add tags, author, and attributes to the search criteria
+            # Search by title, content, tags, author, attributes
             matched_posts = BlogPost.query.filter(
-                (BlogPost.title.ilike(f"%{query}%")) | # type: ignore
-                (BlogPost.content.ilike(f"%{query}%")) | # type: ignore
-                (BlogPost.tags.ilike(f"%{query}%")) | # type: ignore
-                (BlogPost.author.ilike(f"%{query}%")) | # type: ignore
-                (BlogPost.attributes.ilike(f"%{query}%"))  # Ensure attributes is stored in a searchable text/JSON field # type: ignore
+                (BlogPost.title.ilike(f"%{query}%")) |  # type: ignore
+                (BlogPost.content.ilike(f"%{query}%")) |  # type: ignore
+                (BlogPost.tags.ilike(f"%{query}%")) |  # type: ignore
+                (BlogPost.author.ilike(f"%{query}%")) |  # type: ignore
+                (BlogPost.attributes.ilike(f"%{query}%"))  # type: ignore
             ).order_by(BlogPost.created_at.desc()).limit(limit).all()
 
             results = [post.to_dict() for post in matched_posts]

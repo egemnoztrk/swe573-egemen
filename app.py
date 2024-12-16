@@ -21,6 +21,7 @@ if __name__ == '__main__':
         flask_app.run()
         
         # Keep the main thread alive
+        print("Starting")
         while True:
             time.sleep(5)
     except Exception as e:
