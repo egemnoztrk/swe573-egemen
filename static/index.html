@@ -429,6 +429,9 @@
                 <label for="postMaterial">Material</label>
                 <input type="text" id="postMaterial" name="material" placeholder="e.g., Metal">
 
+                <label for="postTexture">Texture</label>
+                <input type="text" id="postTexture" name="texture" placeholder="e.g., Rough, Smooth">
+
                 <fieldset>
                     <legend>Size</legend>
                     <label for="postLength">Length (CM)</label>
@@ -443,6 +446,16 @@
 
                 <label for="postWeight">Weight (KG)</label>
                 <input type="number" id="postWeight" name="weight" placeholder="e.g., 2.5" min="0" step="any">
+
+                <fieldset>
+                    <legend>Geolocation</legend>
+                    <label for="postLatitude">Latitude</label>
+                    <input type="number" id="postLatitude" name="latitude" placeholder="e.g., 37.7749" step="any">
+
+                    <label for="postLongitude">Longitude</label>
+                    <input type="number" id="postLongitude" name="longitude" placeholder="e.g., -122.4194" step="any">
+                </fieldset>
+
             </div>
 
             <button type="button" onclick="submitPost()">Submit Post</button>
@@ -626,10 +639,13 @@
                 color: document.getElementById('postColor').value.trim() || null,
                 shape: document.getElementById('postShape').value.trim() || null,
                 material: document.getElementById('postMaterial').value.trim() || null,
+                texture: document.getElementById('postTexture').value.trim() || null,
                 length: document.getElementById('postLength').value ? parseFloat(document.getElementById('postLength').value) : null,
                 width: document.getElementById('postWidth').value ? parseFloat(document.getElementById('postWidth').value) : null,
                 depth: document.getElementById('postDepth').value ? parseFloat(document.getElementById('postDepth').value) : null,
-                weight: document.getElementById('postWeight').value ? parseFloat(document.getElementById('postWeight').value) : null
+                weight: document.getElementById('postWeight').value ? parseFloat(document.getElementById('postWeight').value) : null,
+                latitude: document.getElementById('postLatitude').value ? parseFloat(document.getElementById('postLatitude').value) : null,
+                longitude: document.getElementById('postLongitude').value ? parseFloat(document.getElementById('postLongitude').value) : null
             };
 
             // Append attributes as JSON string
