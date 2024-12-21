@@ -11,7 +11,7 @@ The primary purpose of this repository is to:
 
 ## Project Structure
 This repository will contain the following components:
-- **Source Code**: All project-related code will be stored here (add folder name if applicable, e.g., `src/`).
+- **Source Code**: All project-related code will be stored here.
 - **Wiki**: Documentation about research on Git, Wikidata, and other learnings will be maintained in the Wiki section.
 - **Issues**: Tasks, bugs, and feature requests will be managed using the Issues feature, with customized tags for better organization.
 
