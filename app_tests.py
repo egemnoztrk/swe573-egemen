@@ -1,11 +1,9 @@
 import unittest
 import json
-from flask import Flask
 from io import BytesIO
-
 from routes import FlaskApp
 
-class TestFlaskApp(unittest.TestCase):
+class TestApp(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
